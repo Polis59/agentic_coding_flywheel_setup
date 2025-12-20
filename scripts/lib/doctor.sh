@@ -7,6 +7,33 @@
 
 ACFS_VERSION="${ACFS_VERSION:-0.1.0}"
 
+# Ensure the doctor is self-contained and doesn't depend on shell rc files
+# for PATH setup (e.g., when run from a fresh SSH session or non-zsh shell).
+ensure_path() {
+    local dir
+    local to_add=()
+
+    for dir in \
+        "$HOME/.local/bin" \
+        "$HOME/.bun/bin" \
+        "$HOME/.cargo/bin" \
+        "$HOME/go/bin" \
+        "$HOME/.atuin/bin"; do
+        [[ -d "$dir" ]] || continue
+        case ":$PATH:" in
+            *":$dir:"*) ;;
+            *) to_add+=("$dir") ;;
+        esac
+    done
+
+    if [[ ${#to_add[@]} -gt 0 ]]; then
+        local prefix
+        prefix=$(IFS=:; echo "${to_add[*]}")
+        export PATH="${prefix}:$PATH"
+    fi
+}
+ensure_path
+
 # Colors
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -90,6 +117,27 @@ check() {
     esac
 }
 
+# Try to retrieve a reasonably informative version line for a command without
+# assuming it supports `--version`.
+get_version_line() {
+    local cmd="$1"
+
+    local version=""
+    version=$("$cmd" --version 2>/dev/null | head -n1) || true
+    if [[ -z "$version" ]]; then
+        version=$("$cmd" -V 2>/dev/null | head -n1) || true
+    fi
+    if [[ -z "$version" ]]; then
+        version=$("$cmd" version 2>/dev/null | head -n1) || true
+    fi
+
+    if [[ -z "$version" ]]; then
+        version="available"
+    fi
+
+    printf '%s' "$version"
+}
+
 # Check if command exists
 check_command() {
     local id="$1"
@@ -99,7 +147,7 @@ check_command() {
 
     if command -v "$cmd" &>/dev/null; then
         local version
-        version=$("$cmd" --version 2>/dev/null | head -n1 || echo "available")
+        version=$(get_version_line "$cmd")
         check "$id" "$label ($version)" "pass" "installed"
     else
         check "$id" "$label" "fail" "not found" "$fix"
@@ -115,7 +163,7 @@ check_optional_command() {
 
     if command -v "$cmd" &>/dev/null; then
         local version
-        version=$("$cmd" --version 2>/dev/null | head -n1 || echo "available")
+        version=$(get_version_line "$cmd")
         check "$id" "$label ($version)" "pass" "installed"
     else
         check "$id" "$label" "warn" "not found" "$fix"
