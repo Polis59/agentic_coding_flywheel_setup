@@ -1,0 +1,439 @@
+#!/usr/bin/env bash
+# ============================================================
+# ACFS Installer - CLI Tools Library
+# Installs modern CLI replacements that acfs.zshrc depends on
+# ============================================================
+
+# Ensure we have logging functions available
+if [[ -z "${ACFS_BLUE:-}" ]]; then
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    # shellcheck source=logging.sh
+    source "$SCRIPT_DIR/logging.sh"
+fi
+
+# ============================================================
+# Configuration
+# ============================================================
+
+# APT packages (available in Ubuntu 24.04+)
+APT_CLI_TOOLS=(
+    ripgrep         # rg - fast grep
+    fd-find         # fd - fast find
+    fzf             # fuzzy finder
+    tmux            # terminal multiplexer
+    neovim          # better vim
+    direnv          # directory-specific env vars
+    jq              # JSON processor
+    htop            # process viewer (fallback for btop)
+)
+
+# APT packages that may not be available on all Ubuntu versions
+APT_CLI_TOOLS_OPTIONAL=(
+    bat             # better cat (may be 'batcat' on older Ubuntu)
+    lsd             # modern ls with icons
+    eza             # modern ls alternative
+    btop            # better top
+    dust            # better du
+)
+
+# Cargo packages (for latest versions or missing apt packages)
+# shellcheck disable=SC2034  # Used for documentation/reference
+CARGO_CLI_TOOLS=(
+    zoxide          # better cd (z command)
+    ast-grep        # structural grep (sg command)
+)
+
+# ============================================================
+# Helper Functions
+# ============================================================
+
+# Check if a command exists
+_cli_command_exists() {
+    command -v "$1" &>/dev/null
+}
+
+# Get the sudo command if needed
+_cli_get_sudo() {
+    if [[ $EUID -eq 0 ]]; then
+        echo ""
+    else
+        echo "sudo"
+    fi
+}
+
+# Run a command as target user
+_cli_run_as_user() {
+    local target_user="${TARGET_USER:-ubuntu}"
+    local target_home="${TARGET_HOME:-/home/$target_user}"
+    local cmd="$1"
+
+    if [[ "$(whoami)" == "$target_user" ]]; then
+        bash -c "$cmd"
+    else
+        $(_cli_get_sudo) -u "$target_user" bash -c "$cmd"
+    fi
+}
+
+# ============================================================
+# APT-based CLI Tools
+# ============================================================
+
+# Install CLI tools available via apt
+install_apt_cli_tools() {
+    local sudo_cmd
+    sudo_cmd=$(_cli_get_sudo)
+
+    log_detail "Installing apt-based CLI tools..."
+
+    # Update package list
+    $sudo_cmd apt-get update -y >/dev/null 2>&1 || true
+
+    # Install core packages (these should always be available)
+    for pkg in "${APT_CLI_TOOLS[@]}"; do
+        if ! dpkg -l "$pkg" 2>/dev/null | grep -q "^ii"; then
+            log_detail "Installing $pkg..."
+            $sudo_cmd apt-get install -y "$pkg" >/dev/null 2>&1 || log_warn "Could not install $pkg via apt"
+        fi
+    done
+
+    # Install optional packages (may not be available on all versions)
+    for pkg in "${APT_CLI_TOOLS_OPTIONAL[@]}"; do
+        if ! dpkg -l "$pkg" 2>/dev/null | grep -q "^ii"; then
+            log_detail "Installing $pkg (optional)..."
+            $sudo_cmd apt-get install -y "$pkg" >/dev/null 2>&1 || true
+        fi
+    done
+
+    # Handle bat/batcat naming issue (Ubuntu calls it batcat)
+    if ! _cli_command_exists bat && _cli_command_exists batcat; then
+        log_detail "Creating bat symlink for batcat..."
+        $sudo_cmd ln -sf "$(which batcat)" /usr/local/bin/bat 2>/dev/null || true
+    fi
+
+    # Handle fd-find naming issue (Ubuntu calls it fdfind)
+    if ! _cli_command_exists fd && _cli_command_exists fdfind; then
+        log_detail "Creating fd symlink for fdfind..."
+        $sudo_cmd ln -sf "$(which fdfind)" /usr/local/bin/fd 2>/dev/null || true
+    fi
+
+    log_success "APT CLI tools installed"
+}
+
+# ============================================================
+# Cargo-based CLI Tools
+# ============================================================
+
+# Install CLI tools via cargo (for latest versions)
+install_cargo_cli_tools() {
+    local target_user="${TARGET_USER:-ubuntu}"
+    local target_home="${TARGET_HOME:-/home/$target_user}"
+    local cargo_bin="$target_home/.cargo/bin/cargo"
+
+    log_detail "Installing cargo-based CLI tools..."
+
+    # Check if cargo is available
+    if [[ ! -x "$cargo_bin" ]]; then
+        log_warn "Cargo not found at $cargo_bin, skipping cargo CLI tools"
+        return 0
+    fi
+
+    # Install zoxide if not already installed
+    if ! _cli_command_exists zoxide; then
+        log_detail "Installing zoxide via cargo..."
+        _cli_run_as_user "$cargo_bin install zoxide --locked 2>/dev/null" || {
+            # Fallback: try the official installer
+            log_detail "Trying zoxide official installer..."
+            _cli_run_as_user 'curl -sSfL https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | sh' || true
+        }
+    fi
+
+    # Install ast-grep (sg command)
+    if ! _cli_command_exists sg; then
+        log_detail "Installing ast-grep via cargo..."
+        _cli_run_as_user "$cargo_bin install ast-grep --locked 2>/dev/null" || log_warn "Could not install ast-grep"
+    fi
+
+    # Install lsd via cargo if apt version not available
+    if ! _cli_command_exists lsd && ! _cli_command_exists eza; then
+        log_detail "Installing lsd via cargo..."
+        _cli_run_as_user "$cargo_bin install lsd --locked 2>/dev/null" || log_warn "Could not install lsd"
+    fi
+
+    # Install dust via cargo if apt version not available
+    if ! _cli_command_exists dust; then
+        log_detail "Installing dust via cargo..."
+        _cli_run_as_user "$cargo_bin install du-dust --locked 2>/dev/null" || log_warn "Could not install dust"
+    fi
+
+    log_success "Cargo CLI tools installed"
+}
+
+# ============================================================
+# Other CLI Tools (via curl/installer scripts)
+# ============================================================
+
+# Install gum (Charmbracelet's glamorous shell tool)
+install_gum() {
+    local sudo_cmd
+    sudo_cmd=$(_cli_get_sudo)
+
+    if _cli_command_exists gum; then
+        log_detail "gum already installed"
+        return 0
+    fi
+
+    log_detail "Installing gum..."
+
+    # Add Charm repository
+    $sudo_cmd mkdir -p /etc/apt/keyrings
+    curl -fsSL https://repo.charm.sh/apt/gpg.key | $sudo_cmd gpg --dearmor -o /etc/apt/keyrings/charm.gpg 2>/dev/null || true
+    echo "deb [signed-by=/etc/apt/keyrings/charm.gpg] https://repo.charm.sh/apt/ * *" | $sudo_cmd tee /etc/apt/sources.list.d/charm.list > /dev/null
+    $sudo_cmd apt-get update -y >/dev/null 2>&1 || true
+    $sudo_cmd apt-get install -y gum >/dev/null 2>&1 || log_warn "Could not install gum"
+
+    if _cli_command_exists gum; then
+        log_success "gum installed"
+    fi
+}
+
+# Install lazygit (Git TUI)
+install_lazygit() {
+    local sudo_cmd
+    sudo_cmd=$(_cli_get_sudo)
+
+    if _cli_command_exists lazygit; then
+        log_detail "lazygit already installed"
+        return 0
+    fi
+
+    log_detail "Installing lazygit..."
+
+    # Try apt first (available in newer Ubuntu)
+    if $sudo_cmd apt-get install -y lazygit >/dev/null 2>&1; then
+        log_success "lazygit installed via apt"
+        return 0
+    fi
+
+    # Fallback: install from GitHub releases
+    local arch
+    arch=$(uname -m)
+    case "$arch" in
+        x86_64) arch="x86_64" ;;
+        aarch64|arm64) arch="arm64" ;;
+        *) log_warn "Unsupported architecture for lazygit: $arch"; return 1 ;;
+    esac
+
+    local version
+    version=$(curl -s "https://api.github.com/repos/jesseduffield/lazygit/releases/latest" | grep -Po '"tag_name": "v\K[^"]*' 2>/dev/null) || version="0.44.1"
+
+    local tmpdir
+    tmpdir=$(mktemp -d)
+    curl -fsSL "https://github.com/jesseduffield/lazygit/releases/download/v${version}/lazygit_${version}_Linux_${arch}.tar.gz" -o "$tmpdir/lazygit.tar.gz" || {
+        log_warn "Could not download lazygit"
+        rm -rf "$tmpdir"
+        return 1
+    }
+
+    tar -xzf "$tmpdir/lazygit.tar.gz" -C "$tmpdir"
+    $sudo_cmd install "$tmpdir/lazygit" /usr/local/bin/lazygit
+    rm -rf "$tmpdir"
+
+    log_success "lazygit installed from GitHub"
+}
+
+# Install lazydocker (Docker TUI)
+install_lazydocker() {
+    local sudo_cmd
+    sudo_cmd=$(_cli_get_sudo)
+
+    if _cli_command_exists lazydocker; then
+        log_detail "lazydocker already installed"
+        return 0
+    fi
+
+    log_detail "Installing lazydocker..."
+
+    # Install from GitHub releases
+    local arch
+    arch=$(uname -m)
+    case "$arch" in
+        x86_64) arch="x86_64" ;;
+        aarch64|arm64) arch="arm64" ;;
+        *) log_warn "Unsupported architecture for lazydocker: $arch"; return 1 ;;
+    esac
+
+    local version
+    version=$(curl -s "https://api.github.com/repos/jesseduffield/lazydocker/releases/latest" | grep -Po '"tag_name": "v\K[^"]*' 2>/dev/null) || version="0.23.3"
+
+    local tmpdir
+    tmpdir=$(mktemp -d)
+    curl -fsSL "https://github.com/jesseduffield/lazydocker/releases/download/v${version}/lazydocker_${version}_Linux_${arch}.tar.gz" -o "$tmpdir/lazydocker.tar.gz" || {
+        log_warn "Could not download lazydocker"
+        rm -rf "$tmpdir"
+        return 1
+    }
+
+    tar -xzf "$tmpdir/lazydocker.tar.gz" -C "$tmpdir"
+    $sudo_cmd install "$tmpdir/lazydocker" /usr/local/bin/lazydocker
+    rm -rf "$tmpdir"
+
+    log_success "lazydocker installed from GitHub"
+}
+
+# Install atuin (shell history)
+install_atuin() {
+    local target_user="${TARGET_USER:-ubuntu}"
+    local target_home="${TARGET_HOME:-/home/$target_user}"
+
+    if [[ -d "$target_home/.atuin" ]] || _cli_command_exists atuin; then
+        log_detail "atuin already installed"
+        return 0
+    fi
+
+    log_detail "Installing atuin..."
+    _cli_run_as_user 'curl --proto "=https" --tlsv1.2 -LsSf https://setup.atuin.sh | sh' || log_warn "Could not install atuin"
+
+    log_success "atuin installed"
+}
+
+# ============================================================
+# Docker Setup
+# ============================================================
+
+# Install and configure Docker
+install_docker() {
+    local sudo_cmd
+    sudo_cmd=$(_cli_get_sudo)
+    local target_user="${TARGET_USER:-ubuntu}"
+
+    if _cli_command_exists docker; then
+        log_detail "Docker already installed"
+    else
+        log_detail "Installing Docker..."
+        $sudo_cmd apt-get install -y docker.io docker-compose-plugin >/dev/null 2>&1 || log_warn "Could not install Docker"
+    fi
+
+    # Add target user to docker group
+    if getent group docker &>/dev/null; then
+        log_detail "Adding $target_user to docker group..."
+        $sudo_cmd usermod -aG docker "$target_user" 2>/dev/null || true
+    fi
+
+    log_success "Docker configured"
+}
+
+# ============================================================
+# Verification Functions
+# ============================================================
+
+# Verify all CLI tools are installed
+verify_cli_tools() {
+    local all_pass=true
+
+    log_detail "Verifying CLI tools..."
+
+    # Core tools (must have)
+    local core_tools=("rg" "fzf" "tmux" "jq")
+    for tool in "${core_tools[@]}"; do
+        if _cli_command_exists "$tool"; then
+            log_detail "  $tool"
+        else
+            log_warn "  Missing: $tool"
+            all_pass=false
+        fi
+    done
+
+    # Preferred tools (one of alternatives)
+    if _cli_command_exists lsd || _cli_command_exists eza; then
+        log_detail "  ls replacement: $(command -v lsd || command -v eza)"
+    else
+        log_warn "  Missing: lsd or eza"
+    fi
+
+    if _cli_command_exists bat || _cli_command_exists batcat; then
+        log_detail "  cat replacement: $(command -v bat || command -v batcat)"
+    else
+        log_warn "  Missing: bat"
+    fi
+
+    if _cli_command_exists fd || _cli_command_exists fdfind; then
+        log_detail "  find replacement: $(command -v fd || command -v fdfind)"
+    else
+        log_warn "  Missing: fd"
+    fi
+
+    # Optional tools (nice to have)
+    local optional_tools=("zoxide" "direnv" "nvim" "lazygit" "gum" "atuin")
+    for tool in "${optional_tools[@]}"; do
+        if _cli_command_exists "$tool"; then
+            log_detail "  $tool"
+        fi
+    done
+
+    if [[ "$all_pass" == "true" ]]; then
+        log_success "All core CLI tools verified"
+        return 0
+    else
+        log_warn "Some CLI tools are missing"
+        return 1
+    fi
+}
+
+# Get versions of installed tools (for doctor output)
+get_cli_tool_versions() {
+    echo "CLI Tool Versions:"
+
+    _cli_command_exists rg && echo "  ripgrep: $(rg --version | head -1)"
+    _cli_command_exists fzf && echo "  fzf: $(fzf --version)"
+    _cli_command_exists tmux && echo "  tmux: $(tmux -V)"
+    _cli_command_exists nvim && echo "  neovim: $(nvim --version | head -1)"
+    _cli_command_exists lsd && echo "  lsd: $(lsd --version)"
+    _cli_command_exists eza && echo "  eza: $(eza --version | head -1)"
+    _cli_command_exists bat && echo "  bat: $(bat --version)"
+    _cli_command_exists fd && echo "  fd: $(fd --version)"
+    _cli_command_exists zoxide && echo "  zoxide: $(zoxide --version)"
+    _cli_command_exists lazygit && echo "  lazygit: $(lazygit --version | head -1)"
+    _cli_command_exists gum && echo "  gum: $(gum --version)"
+    _cli_command_exists atuin && echo "  atuin: $(atuin --version)"
+    _cli_command_exists docker && echo "  docker: $(docker --version)"
+}
+
+# ============================================================
+# Main Installation Function
+# ============================================================
+
+# Install all CLI tools (called by install.sh)
+install_all_cli_tools() {
+    log_step "4/8" "Installing CLI tools..."
+
+    # Install gum first for enhanced UI
+    install_gum
+
+    # APT-based tools
+    install_apt_cli_tools
+
+    # Cargo-based tools (requires rust to be installed first)
+    install_cargo_cli_tools
+
+    # Other installers
+    install_lazygit
+    install_lazydocker
+    install_atuin
+
+    # Docker
+    install_docker
+
+    # Verify installation
+    verify_cli_tools
+
+    log_success "CLI tools installation complete"
+}
+
+# ============================================================
+# Module can be sourced or run directly
+# ============================================================
+
+# If run directly (not sourced), execute main function
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    install_all_cli_tools "$@"
+fi
