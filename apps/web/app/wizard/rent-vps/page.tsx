@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { AlertCard } from "@/components/alert-card";
 import { cn } from "@/lib/utils";
 import { markStepComplete } from "@/lib/wizardSteps";
+import { useWizardAnalytics } from "@/lib/hooks/useWizardAnalytics";
 import {
   SimplerGuide,
   GuideSection,
@@ -149,15 +150,23 @@ export default function RentVPSPage() {
   const [expandedProvider, setExpandedProvider] = useState<string | null>(null);
   const [isNavigating, setIsNavigating] = useState(false);
 
+  // Analytics tracking for this wizard step
+  const { markComplete } = useWizardAnalytics({
+    step: "rent_vps",
+    stepNumber: 4,
+    stepTitle: "Rent a VPS",
+  });
+
   const handleToggleProvider = useCallback((providerId: string) => {
     setExpandedProvider((prev) => (prev === providerId ? null : providerId));
   }, []);
 
   const handleContinue = useCallback(() => {
+    markComplete({ expanded_provider: expandedProvider });
     markStepComplete(4);
     setIsNavigating(true);
     router.push("/wizard/create-vps");
-  }, [router]);
+  }, [router, markComplete, expandedProvider]);
 
   return (
     <div className="space-y-8">

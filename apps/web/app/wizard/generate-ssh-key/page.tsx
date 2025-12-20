@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { CommandCard } from "@/components/command-card";
 import { AlertCard, DetailsSection } from "@/components/alert-card";
 import { markStepComplete } from "@/lib/wizardSteps";
+import { useWizardAnalytics } from "@/lib/hooks/useWizardAnalytics";
 import { useUserOS, useMounted } from "@/lib/userPreferences";
 import {
   SimplerGuide,
@@ -23,6 +24,13 @@ export default function GenerateSSHKeyPage() {
   const [isNavigating, setIsNavigating] = useState(false);
   const mounted = useMounted();
 
+  // Analytics tracking for this wizard step
+  const { markComplete } = useWizardAnalytics({
+    step: "generate_ssh_key",
+    stepNumber: 3,
+    stepTitle: "Generate SSH Key",
+  });
+
   // Redirect if no OS selected (after hydration)
   useEffect(() => {
     if (mounted && os === null) {
@@ -31,10 +39,11 @@ export default function GenerateSSHKeyPage() {
   }, [mounted, os, router]);
 
   const handleContinue = useCallback(() => {
+    markComplete();
     markStepComplete(3);
     setIsNavigating(true);
     router.push("/wizard/rent-vps");
-  }, [router]);
+  }, [router, markComplete]);
 
   if (!mounted || !os) {
     return (
