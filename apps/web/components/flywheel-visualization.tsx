@@ -271,11 +271,29 @@ function ToolDetailPanel({
   const Icon = iconMap[tool.icon] || Zap;
   const [copied, setCopied] = useState(false);
 
-  const copyInstallCommand = () => {
-    if (tool.installCommand) {
-      navigator.clipboard.writeText(tool.installCommand);
+  const copyInstallCommand = async () => {
+    if (!tool.installCommand) return;
+
+    try {
+      await navigator.clipboard.writeText(tool.installCommand);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Fallback for older browsers or when clipboard permission is denied
+      const textArea = document.createElement("textarea");
+      textArea.value = tool.installCommand;
+      textArea.style.position = "fixed";
+      textArea.style.opacity = "0";
+      document.body.appendChild(textArea);
+      textArea.select();
+      try {
+        document.execCommand("copy");
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      } catch {
+        // Silent fail - user can manually copy
+      }
+      document.body.removeChild(textArea);
     }
   };
 
