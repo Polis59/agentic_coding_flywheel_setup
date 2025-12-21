@@ -784,10 +784,37 @@ export default function WorkflowPage() {
               </ul>
             </GuideExplain>
 
+            <GuideSection title="The Model Hierarchy">
+              <p className="mb-3">
+                Different prompts work better with different models:
+              </p>
+              <ul className="space-y-2">
+                <li>
+                  <strong>Opus 4.5 / GPT 5.2 with extra effort</strong> — Use for scrutinize_ui,
+                  check_orm, and other high-stakes analysis prompts. These require deep reasoning.
+                </li>
+                <li>
+                  <strong>Claude Sonnet / GPT 4o</strong> — Great for fresh_review, fix_bug,
+                  work_on_beads, and routine coding tasks. Fast and reliable.
+                </li>
+                <li>
+                  <strong>Any model</strong> — check_mail, reread_agents, git_commit work fine
+                  with any capable model.
+                </li>
+              </ul>
+            </GuideSection>
+
             <GuideTip>
-              Run these prompts on 7+ projects daily, keeping 3 machines busy constantly.
-              The compound effect is incredible — you wake up to meaningful improvements!
+              <strong>When you&apos;re feeling dissatisfied</strong> with a project but lack the energy
+              to engage directly, the scrutinize_ui prompt is your best friend. Let the AI find
+              what&apos;s wrong while you do something else entirely.
             </GuideTip>
+
+            <GuideCaution>
+              <strong>Test coverage is your safety net.</strong> This autopilot approach only
+              works safely when you have comprehensive unit tests and e2e integration tests.
+              The tests act as guardrails preventing agents from breaking things.
+            </GuideCaution>
           </SimplerGuide>
         </CollapsibleSection>
 
