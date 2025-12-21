@@ -36,11 +36,11 @@ const PROVIDERS: ProviderInfo[] = [
     url: "https://contabo.com/en-us/vps/",
     pros: [
       "Best specs-to-price ratio on the market",
-      "Cloud VPS 50 (64GB RAM, 16 vCPU): ~$37/month - BEST VALUE",
-      "Cloud VPS 40 (48GB RAM, 12 vCPU): ~$21/month - budget option",
-      "EU and US data centers with monthly billing",
+      "Cloud VPS 50 (64GB RAM, 16 vCPU): ~$56/month (US datacenter)",
+      "Cloud VPS 40 (48GB RAM, 12 vCPU): ~$36/month (US datacenter)",
+      "Prices are month-to-month, no commitment required",
     ],
-    recommended: "Cloud VPS 50 (64GB RAM, 16 vCPU, ~$37/month) - our top pick for serious multi-agent work",
+    recommended: "Cloud VPS 50 (64GB RAM, 16 vCPU, ~$56/month US) - our top pick for serious multi-agent work",
   },
   {
     id: "ovh",
@@ -49,11 +49,11 @@ const PROVIDERS: ProviderInfo[] = [
     url: "https://us.ovhcloud.com/vps/",
     pros: [
       "Great EU and US data centers with anti-DDoS included",
-      "VPS-5 (64GB RAM, 16 vCore): ~$34/month*",
-      "VPS-4 (48GB RAM, 12 vCore): ~$22/month* - budget option",
-      "*Prices shown are 'Starting at' rates - may vary with billing period",
+      "VPS-5 (64GB RAM, 16 vCore): ~$40/month (no commitment)",
+      "VPS-4 (48GB RAM, 12 vCore): ~$26/month (no commitment)",
+      "Prices are month-to-month; longer commitments offer 5-15% discounts",
     ],
-    recommended: "VPS-5 (64GB RAM, 16 vCore, ~$34/month) for best multi-agent performance",
+    recommended: "VPS-5 (64GB RAM, 16 vCore, ~$40/month) for best multi-agent performance",
   },
 ];
 
@@ -144,7 +144,7 @@ const SPEC_CHECKLIST = [
   { label: "CPU", value: "12+ vCPU" },
   { label: "RAM", value: "48GB+ (32GB absolute minimum)" },
   { label: "Storage", value: "250GB+ NVMe SSD" },
-  { label: "Price", value: "~$21-37/month" },
+  { label: "Price", value: "~$26-56/month (month-to-month)" },
 ];
 
 export default function RentVPSPage() {
@@ -180,7 +180,7 @@ export default function RentVPSPage() {
           </div>
           <div>
             <h1 className="bg-gradient-to-r from-foreground via-foreground to-muted-foreground bg-clip-text text-2xl font-bold tracking-tight text-transparent sm:text-3xl">
-              Rent a <Jargon term="vps">VPS</Jargon> (~$21-37/month)
+              Rent a <Jargon term="vps">VPS</Jargon> (~$26-56/month)
             </h1>
             <p className="text-sm text-muted-foreground">
               ~5 min
@@ -287,28 +287,27 @@ export default function RentVPSPage() {
                 <strong>32GB RAM:</strong> Absolute minimum. Can run 5-8 agents.
               </li>
               <li>
-                <strong>48GB RAM:</strong> Good starting point. Run 10+ agents comfortably. (~$21/month)
+                <strong>48GB RAM:</strong> Good starting point. Run 10+ agents comfortably. (~$36/month US)
               </li>
               <li>
-                <strong>64GB RAM:</strong> Our recommendation. Run 20+ agents with headroom. (~$37/month)
+                <strong>64GB RAM:</strong> Our recommendation. Run 20+ agents with headroom. (~$56/month US)
               </li>
             </ul>
             <div className="mt-4 rounded-lg border border-border/50 bg-card/50 p-3">
               <p className="text-sm text-muted-foreground">
-                <strong>Don&apos;t bottleneck your investment:</strong> Your VPS is just ~5% of
-                the total cost if you&apos;re running AI subscriptions ($200-600/month), but
-                it&apos;s the foundation that makes everything work. The extra $16/month for
+                <strong>Don&apos;t bottleneck your investment:</strong> Your VPS is only ~6-13%
+                of the total cost (AI subscriptions are $400-600/month), but
+                it&apos;s the foundation that makes everything work. The extra $14-20/month for
                 64GB vs 48GB is trivial compared to your AI subscription costs—but that extra
                 headroom is critical for running agents reliably and efficiently.
               </p>
             </div>
           </GuideSection>
 
-          <GuideSection title="The Full Investment (Optional but Recommended)">
+          <GuideSection title="The Full Investment">
             <p className="mb-4 text-sm text-muted-foreground">
-              To get the FULL benefit of this approach with many parallel agents, you&apos;ll
-              also need subscriptions to AI services. This is optional; you can start
-              smaller and scale up!
+              To use the agentic coding approach, you&apos;ll need subscriptions to AI services
+              in addition to your VPS. Here&apos;s what the full setup looks like:
             </p>
             <div className="space-y-3">
               <div className="rounded-lg border border-border/50 bg-card/50 p-3">
@@ -319,26 +318,37 @@ export default function RentVPSPage() {
                 </p>
               </div>
               <div className="rounded-lg border border-border/50 bg-card/50 p-3">
-                <p className="font-medium text-foreground">GPT Pro ($200/month)</p>
+                <p className="font-medium text-foreground">GPT Pro ($200/month) — Critical for Planning</p>
                 <p className="text-sm text-muted-foreground">
-                  Access to OpenAI&apos;s Codex and o1 models. Great for redundancy and
-                  comparing outputs from different AI systems.
+                  Access to GPT 5.2 Pro with Extended Thinking in the ChatGPT webapp. This is
+                  <strong> the key to making this approach work</strong>: you use it to write,
+                  revise, and iterate on comprehensive plan documents in markdown. Everything
+                  depends on having an extremely detailed, granular plan—which you then convert
+                  into trackable tasks (beads). The extended thinking capability is unmatched
+                  for this kind of strategic planning work.
                 </p>
               </div>
               <div className="rounded-lg border border-primary/20 bg-primary/5 p-3">
                 <p className="font-medium text-foreground">Total for full setup:</p>
                 <p className="text-sm text-muted-foreground">
-                  VPS (~$37) + Claude Max x2 ($400) + GPT Pro ($200) = <strong>~$637/month</strong>
+                  VPS (~$56) + Claude Max x2 ($400) + GPT Pro ($200) = <strong>~$656/month</strong>
                   <br /><br />
-                  <em>This sounds like a lot, but if it helps you build and ship faster,
-                  it pays for itself quickly!</em>
+                  <em>This sounds like a lot, but compare it to hiring: a junior developer in the US
+                  costs $100k+/year (~$8,300+/month). For less than 10% of that, you get AI agents
+                  working 24/7 with no vacation, no onboarding, and instant scaling.</em>
                 </p>
               </div>
             </div>
-            <p className="mt-4 text-sm text-muted-foreground">
-              <strong>Starting small?</strong> Get the 48GB VPS (~$21/month) and one Claude Pro
-              subscription ($20/month). You can scale up as you see results!
-            </p>
+            <div className="mt-4 rounded-lg border border-[oklch(0.65_0.12_30/0.3)] bg-[oklch(0.65_0.12_30/0.08)] p-3">
+              <p className="text-sm text-muted-foreground">
+                <strong>⚠️ Realistic minimum investment:</strong> VPS (~$26-56/month) + Claude Max ($200/month) + GPT Pro ($200/month) = <strong>~$426-456/month</strong>.
+                The $20/month Claude Pro tier does <em>not</em> have enough capacity for agentic workflows—you&apos;ll
+                hit rate limits almost immediately. Claude Max is required for execution, and GPT Pro&apos;s extended
+                thinking is essential for creating the detailed plan documents that make this approach work.
+                <br /><br />
+                <strong>Perspective:</strong> A junior US developer costs ~$8k+/month. This is ~5% of that, for AI agents that work 24/7.
+              </p>
+            </div>
           </GuideSection>
 
           <GuideSection title="Which provider should I choose?">
@@ -348,15 +358,22 @@ export default function RentVPSPage() {
             <ul className="space-y-3">
               <li>
                 <strong>Contabo:</strong> Our top recommendation! Best specs for the price.
-                Cloud VPS 50 (64GB RAM, ~$37/month) is our top pick. Cloud VPS 40 (48GB RAM, ~$21/month)
+                Cloud VPS 50 (64GB RAM, ~$56/month US) is our top pick. Cloud VPS 40 (48GB RAM, ~$36/month US)
                 for budget. Interface is basic but functional. Instant activation.
               </li>
               <li>
                 <strong>OVH:</strong> Great alternative with polished interface.
-                VPS-5 (64GB RAM, ~$34/month) or VPS-4 (48GB RAM, ~$22/month).
+                VPS-5 (64GB RAM, ~$40/month) or VPS-4 (48GB RAM, ~$26/month).
                 Great EU and US data centers. Instant activation.
               </li>
             </ul>
+            <div className="mt-4 rounded-lg border border-[oklch(0.65_0.15_220/0.3)] bg-[oklch(0.65_0.15_220/0.08)] p-3">
+              <p className="text-sm text-muted-foreground">
+                <strong>💡 About pricing:</strong> All prices shown are <strong>month-to-month with no commitment</strong>.
+                Both providers offer 5-20% discounts if you prepay for 6-12 months, but we recommend starting
+                monthly so you can cancel anytime. Contabo US pricing includes the ~$10/month US datacenter fee.
+              </p>
+            </div>
           </GuideSection>
 
           <GuideSection title="Step-by-Step: Signing Up (Contabo Example)">
@@ -431,7 +448,7 @@ export default function RentVPSPage() {
           </GuideSection>
 
           <GuideTip>
-            If you&apos;re not sure what to pick, get the <strong>Cloud VPS 50</strong> (64GB RAM, 16 vCPU, ~$37/month)
+            If you&apos;re not sure what to pick, get the <strong>Cloud VPS 50</strong> (64GB RAM, 16 vCPU, ~$56/month US)
             from Contabo - best value for serious multi-agent work. Both providers activate quickly.
           </GuideTip>
 
