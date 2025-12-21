@@ -97,9 +97,6 @@ function ConnectionLine({
 
   const color1 = getColor(fromColor);
   const color2 = getColor(toColor);
-  const dx = toPos.x - fromPos.x;
-  const dy = toPos.y - fromPos.y;
-  const pathLength = Math.sqrt(dx * dx + dy * dy) * 1.2;
 
   return (
     <g>

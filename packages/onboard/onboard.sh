@@ -246,8 +246,14 @@ check_auth_status() {
             if ! command -v tailscale &>/dev/null; then
                 return 2
             fi
-            local status
-            status=$(tailscale status --json 2>/dev/null | jq -r '.BackendState // "unknown"' 2>/dev/null || echo "unknown")
+            local status="unknown"
+            if command -v jq &>/dev/null; then
+                status=$(tailscale status --json 2>/dev/null | jq -r '.BackendState // "unknown"' 2>/dev/null || echo "unknown")
+            else
+                if tailscale status --json 2>/dev/null | grep -q '"BackendState"[[:space:]]*:[[:space:]]*"Running"'; then
+                    status="Running"
+                fi
+            fi
             [[ "$status" == "Running" ]] && return 0 || return 1
             ;;
         claude)
@@ -255,6 +261,9 @@ check_auth_status() {
                 return 2
             fi
             # Check for claude config
+            if [[ -s "$HOME/.claude/config.json" || -s "$HOME/.config/claude/config.json" ]]; then
+                return 0
+            fi
             [[ -d "$HOME/.claude" ]] && return 0 || return 1
             ;;
         codex)
@@ -262,14 +271,17 @@ check_auth_status() {
                 return 2
             fi
             # Codex stores auth in ~/.codex
-            [[ -f "$HOME/.codex/auth.json" ]] && return 0 || return 1
+            [[ -s "$HOME/.codex/auth.json" ]] && return 0 || return 1
             ;;
         gemini)
             if ! command -v gemini &>/dev/null; then
                 return 2
             fi
+            if [[ -n "${GOOGLE_API_KEY:-}" ]]; then
+                return 0
+            fi
             # Gemini uses gcloud/google auth
-            [[ -d "$HOME/.config/gemini" ]] && return 0 || return 1
+            [[ -s "$HOME/.config/gemini/credentials.json" || -d "$HOME/.config/gemini" ]] && return 0 || return 1
             ;;
         github)
             if ! command -v gh &>/dev/null; then
@@ -281,19 +293,31 @@ check_auth_status() {
             if ! command -v vercel &>/dev/null; then
                 return 2
             fi
-            [[ -f "$HOME/.config/vercel/auth.json" ]] && return 0 || return 1
+            if [[ -s "$HOME/.config/vercel/auth.json" || -s "$HOME/.vercel/auth.json" ]]; then
+                return 0
+            fi
+            return 1
             ;;
         supabase)
             if ! command -v supabase &>/dev/null; then
                 return 2
             fi
-            [[ -f "$HOME/.config/supabase/access-token" ]] && return 0 || return 1
+            if [[ -n "${SUPABASE_ACCESS_TOKEN:-}" ]]; then
+                return 0
+            fi
+            if [[ -s "$HOME/.supabase/access-token" || -s "$HOME/.config/supabase/access-token" ]]; then
+                return 0
+            fi
+            return 1
             ;;
         cloudflare)
             if ! command -v wrangler &>/dev/null; then
                 return 2
             fi
-            [[ -f "$HOME/.config/.wrangler/config/default.toml" ]] && return 0 || return 1
+            if [[ -s "$HOME/.config/.wrangler/config/default.toml" || -s "$HOME/.wrangler/config/default.toml" ]]; then
+                return 0
+            fi
+            return 1
             ;;
         *)
             return 2
