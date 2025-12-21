@@ -34,7 +34,7 @@ test.describe("Wizard Flow", () => {
     await expect(page.locator("h1").first()).toBeVisible({ timeout: 5000 });
 
     // Select macOS
-    await page.click('text="macOS"');
+    await page.getByRole('radio', { name: /Mac/i }).click();
 
     // Click continue
     await page.click('button:has-text("Continue")');
@@ -46,7 +46,7 @@ test.describe("Wizard Flow", () => {
   test("should complete step 2: Install terminal", async ({ page }) => {
     // Set up prerequisite state
     await page.goto("/wizard/os-selection");
-    await page.click('text="macOS"');
+    await page.getByRole('radio', { name: /Mac/i }).click();
     await page.click('button:has-text("Continue")');
 
     // Now on step 2
@@ -63,7 +63,7 @@ test.describe("Wizard Flow", () => {
   test("should complete step 3: Generate SSH key", async ({ page }) => {
     // Set up prerequisite state
     await page.goto("/wizard/os-selection");
-    await page.click('text="macOS"');
+    await page.getByRole('radio', { name: /Mac/i }).click();
     await page.click('button:has-text("Continue")');
     await page.click('button:has-text("Continue")');
 
@@ -81,7 +81,7 @@ test.describe("Wizard Flow", () => {
   test("should complete step 4: Rent VPS", async ({ page }) => {
     // Set up prerequisite state
     await page.goto("/wizard/os-selection");
-    await page.click('text="macOS"');
+    await page.getByRole('radio', { name: /Mac/i }).click();
     await page.click('button:has-text("Continue")');
     await page.click('button:has-text("Continue")');
     await page.click('button:has-text("Continue")');
@@ -100,7 +100,7 @@ test.describe("Wizard Flow", () => {
   test("should complete step 5: Create VPS with IP address", async ({ page }) => {
     // Set up prerequisite state
     await page.goto("/wizard/os-selection");
-    await page.click('text="macOS"');
+    await page.getByRole('radio', { name: /Mac/i }).click();
     await page.click('button:has-text("Continue")');
     await page.click('button:has-text("Continue")');
     await page.click('button:has-text("Continue")');
@@ -206,7 +206,7 @@ test.describe("SSH Connect Page - Critical Bug Prevention", () => {
 test.describe("State Persistence", () => {
   test("should persist OS selection across page reloads", async ({ page }) => {
     await page.goto("/wizard/os-selection");
-    await page.click('text="Windows"');
+    await page.getByRole('radio', { name: /Windows/i }).click();
     await page.click('button:has-text("Continue")');
 
     // Reload the page
@@ -251,7 +251,7 @@ test.describe("Navigation", () => {
     }
 
     await page.goto("/wizard/os-selection");
-    await page.click('text="macOS"');
+    await page.getByRole('radio', { name: /Mac/i }).click();
     await page.click('button:has-text("Continue")');
 
     // Now on step 2, click on step 1 in sidebar
@@ -271,7 +271,7 @@ test.describe("Navigation", () => {
 
   test("should navigate using back button", async ({ page }) => {
     await page.goto("/wizard/os-selection");
-    await page.click('text="macOS"');
+    await page.getByRole('radio', { name: /Mac/i }).click();
     await page.click('button:has-text("Continue")');
 
     // Now on step 2
@@ -376,7 +376,7 @@ test.describe("Complete Wizard Flow Integration", () => {
     await expect(page).toHaveURL("/wizard/os-selection");
 
     // Step 1: Select OS
-    await page.click('text="macOS"');
+    await page.getByRole('radio', { name: /Mac/i }).click();
     await page.click('button:has-text("Continue")');
     await expect(page).toHaveURL("/wizard/install-terminal");
 

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useState } from "react";
 import {
   ArrowRight,
@@ -13,7 +14,6 @@ import {
   Clock,
   Sparkles,
   ChevronRight,
-  Heart,
   MessageCircle,
 } from "lucide-react";
 import { motion, AnimatePresence } from "@/components/motion";
@@ -408,11 +408,33 @@ function AboutSection() {
           animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
           transition={{ ...springs.smooth, delay: 0.1 }}
         >
-          <div className="mx-auto flex items-center justify-center gap-4">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/20">
-              <Heart className="h-8 w-8 text-primary" />
+          {/* Headshot with gradient ring */}
+          <motion.div
+            className="mx-auto flex items-center justify-center"
+            whileHover={{ scale: 1.05 }}
+            transition={springs.snappy}
+          >
+            <div className="relative">
+              {/* Gradient ring */}
+              <div className="absolute -inset-1 rounded-full bg-gradient-to-br from-[oklch(0.75_0.18_195)] via-[oklch(0.7_0.2_330)] to-[oklch(0.78_0.16_75)] opacity-75 blur-sm" />
+              <div className="absolute -inset-1 rounded-full bg-gradient-to-br from-[oklch(0.75_0.18_195)] via-[oklch(0.7_0.2_330)] to-[oklch(0.78_0.16_75)]" />
+              {/* Image container */}
+              <div className="relative h-28 w-28 overflow-hidden rounded-full border-2 border-background sm:h-32 sm:w-32">
+                <Image
+                  src="/je_headshot.jpg"
+                  alt="Jeffrey Emanuel"
+                  fill
+                  sizes="(max-width: 640px) 112px, 128px"
+                  className="object-cover"
+                  priority
+                />
+              </div>
+              {/* Sparkle accent */}
+              <div className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full bg-background shadow-lg">
+                <Sparkles className="h-3.5 w-3.5 text-[oklch(0.78_0.16_75)]" />
+              </div>
             </div>
-          </div>
+          </motion.div>
 
           <div className="space-y-4 text-muted-foreground leading-relaxed">
             <p>
