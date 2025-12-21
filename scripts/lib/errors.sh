@@ -116,7 +116,7 @@ get_error_pattern() {
     # e.g. "curl: (28) Connection timed out" before "timed out"
     # Use array for safety with spaces
     local sorted_patterns=()
-    while IFS=$'\t' read -r _ len pat; do
+    while IFS=$'\t' read -r _ pat; do
         sorted_patterns+=("$pat")
     done < <(for p in "${!ERROR_PATTERNS[@]}"; do echo -e "${#p}\t$p"; done | sort -rn)
 

@@ -139,12 +139,9 @@ export function createAuthChecks(overrides: Partial<AuthCheckDeps> = {}) {
   };
 
   const checkGemini = (): AuthStatus => {
-    if (deps.env.GOOGLE_API_KEY) {
-      return { authenticated: true, details: 'via GOOGLE_API_KEY' };
-    }
-    if (deps.env.GEMINI_API_KEY) {
-      return { authenticated: true, details: 'via GEMINI_API_KEY' };
-    }
+    // Gemini CLI uses OAuth web login (like Claude Code and Codex CLI)
+    // Users authenticate via `gemini` command which opens browser login
+    // Credentials are stored in config files, NOT via API keys
     const credPath = path.join(homedir, '.config', 'gemini', 'credentials.json');
     if (deps.existsSync(credPath)) {
       return { authenticated: true };
@@ -153,8 +150,9 @@ export function createAuthChecks(overrides: Partial<AuthCheckDeps> = {}) {
     if (deps.existsSync(legacyConfigPath)) {
       return { authenticated: true };
     }
-    const adcPath = path.join(homedir, '.config', 'gcloud', 'application_default_credentials.json');
-    if (deps.existsSync(adcPath)) {
+    // Check for Gemini CLI config directory (may exist even without credentials.json)
+    const geminiConfigDir = path.join(homedir, '.config', 'gemini');
+    if (deps.existsSync(geminiConfigDir)) {
       return { authenticated: true };
     }
     return { authenticated: false };
