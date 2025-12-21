@@ -11,6 +11,7 @@ import {
   Cloud,
   Wrench,
   Sparkles,
+  Terminal,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -148,6 +149,18 @@ function ServiceCard({ service, isChecked, onToggle }: ServiceCardProps) {
               <ExternalLink className="h-2.5 w-2.5" />
             </a>
           </div>
+          {/* Post-install command preview */}
+          {service.postInstallCommand && (
+            <div className="flex items-center gap-2 pt-2 text-xs text-muted-foreground/70">
+              <Terminal className="h-3 w-3 shrink-0" />
+              <span>
+                After install:{" "}
+                <code className="rounded bg-muted/50 px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
+                  {service.postInstallCommand}
+                </code>
+              </span>
+            </div>
+          )}
         </div>
         {isChecked && (
           <Check className="h-5 w-5 shrink-0 text-[oklch(0.72_0.19_145)]" />

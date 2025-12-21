@@ -2,7 +2,15 @@
 
 import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
-import { AlertCircle, Stethoscope } from "lucide-react";
+import {
+  AlertCircle,
+  Stethoscope,
+  KeyRound,
+  Shield,
+  Bot,
+  Cloud,
+  Wrench,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CommandCard } from "@/components/command-card";
 import { AlertCard, OutputPreview } from "@/components/alert-card";
