@@ -5,6 +5,10 @@
 ![License](https://img.shields.io/badge/License-MIT-50fa7b?style=for-the-badge)
 ![Shell](https://img.shields.io/badge/Shell-Bash-ff79c6?style=for-the-badge)
 
+<p align="center">
+  <strong>🌐 <a href="https://agent-flywheel.com">agent-flywheel.com</a></strong> — Interactive setup wizard for beginners
+</p>
+
 > **From zero to fully-configured agentic coding VPS in 30 minutes.**
 > A complete bootstrapping system that transforms a fresh Ubuntu VPS into a professional AI-powered development environment.
 
@@ -95,7 +99,7 @@ graph LR
 ```
 
 ### For Beginners
-ACFS includes a **step-by-step wizard website** that guides complete beginners through:
+ACFS includes a **step-by-step wizard website** at [agent-flywheel.com](https://agent-flywheel.com) that guides complete beginners through:
 1. Installing a terminal on their local machine
 2. Generating SSH keys
 3. Renting a VPS from providers like OVH, Contabo, or Hetzner
@@ -115,59 +119,48 @@ ACFS provides a **reproducible, idempotent** setup that ensures every team membe
 
 ACFS is built around a **single source of truth**: the manifest file. Everything else—the installer scripts, doctor checks, website content—derives from this central definition. This architecture ensures consistency and makes the system easy to extend.
 
-```mermaid
-graph TD
-    %%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#e3f2fd', 'lineColor': '#90a4ae'}}}%%
-
-    classDef manifest fill:#e3f2fd,stroke:#90caf9,stroke-width:2px,color:#1565c0
-    classDef generator fill:#e0f7fa,stroke:#80deea,stroke-width:2px,color:#00695c
-    classDef website fill:#fff8e1,stroke:#ffcc80,stroke-width:2px,color:#e65100
-    classDef installer fill:#f3e5f5,stroke:#ce93d8,stroke-width:2px,color:#6a1b9a
-    classDef config fill:#e8f5e9,stroke:#a5d6a7,stroke-width:2px,color:#2e7d32
-
-    subgraph source [" Source of Truth "]
-        MANIFEST["acfs.manifest.yaml<br/>Tool Definitions"]:::manifest
-    end
-
-    subgraph generator [" Code Generation "]
-        PARSER["TypeScript Parser<br/>(Zod Validation)"]:::generator
-        GEN["generate.ts"]:::generator
-    end
-
-    subgraph outputs [" Generated Outputs "]
-        SCRIPTS["scripts/generated/<br/>11 Category Scripts"]:::installer
-        DOCTOR["doctor_checks.sh<br/>Verification Logic"]:::installer
-        MASTER["install_all.sh<br/>Master Installer"]:::installer
-    end
-
-    subgraph components [" Components "]
-        WEBSITE["apps/web/<br/>Next.js Wizard"]:::website
-        INSTALLER["install.sh<br/>Bash Installer"]:::installer
-        CONFIGS["acfs/<br/>Shell Configs"]:::config
-        SECURITY["checksums.yaml<br/>SHA256 Hashes"]:::config
-    end
-
-    subgraph target [" Target VPS "]
-        TOOLS["30+ Tools"]
-        SHELL["zsh + p10k"]
-        AGENTS["AI Agents"]
-    end
-
-    MANIFEST --> PARSER
-    PARSER --> GEN
-    GEN --> SCRIPTS
-    GEN --> DOCTOR
-    GEN --> MASTER
-    MANIFEST --> WEBSITE
-    SCRIPTS --> INSTALLER
-    DOCTOR --> INSTALLER
-    SECURITY --> INSTALLER
-    INSTALLER --> TOOLS
-    INSTALLER --> SHELL
-    INSTALLER --> AGENTS
-    CONFIGS --> SHELL
-
-    linkStyle 0,1,2,3,4,5,6,7,8,9,10,11,12,13 stroke:#90a4ae,stroke-width:2px
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                            SOURCE OF TRUTH                                   │
+│  ┌─────────────────────────────────────────────────────────────────────┐    │
+│  │  acfs.manifest.yaml                                                  │    │
+│  │  Tool Definitions • Install Commands • Verification Logic           │    │
+│  └─────────────────────────────────────────────────────────────────────┘    │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                      │
+                    ┌─────────────────┴─────────────────┐
+                    ▼                                   ▼
+┌───────────────────────────────────┐   ┌───────────────────────────────────┐
+│        CODE GENERATION            │   │        WIZARD WEBSITE             │
+│  ┌─────────────────────────────┐  │   │  ┌─────────────────────────────┐  │
+│  │ TypeScript Parser (Zod)     │  │   │  │ apps/web/ (Next.js 16)      │  │
+│  │ generate.ts                 │  │   │  │ agent-flywheel.com          │  │
+│  └─────────────────────────────┘  │   │  └─────────────────────────────┘  │
+└───────────────────────────────────┘   └───────────────────────────────────┘
+                    │
+                    ▼
+┌───────────────────────────────────────────────────────────────────────────┐
+│                         GENERATED OUTPUTS                                  │
+│  ┌────────────────────┐  ┌────────────────────┐  ┌────────────────────┐   │
+│  │ scripts/generated/ │  │ doctor_checks.sh   │  │ install_all.sh     │   │
+│  │ 11 Category Scripts│  │ Verification Logic │  │ Master Installer   │   │
+│  └────────────────────┘  └────────────────────┘  └────────────────────┘   │
+└───────────────────────────────────────────────────────────────────────────┘
+                    │
+                    ▼
+┌───────────────────────────────────────────────────────────────────────────┐
+│                            INSTALLER                                       │
+│  install.sh + scripts/lib/*.sh + checksums.yaml (SHA256 verification)     │
+└───────────────────────────────────────────────────────────────────────────┘
+                    │
+                    ▼
+┌───────────────────────────────────────────────────────────────────────────┐
+│                           TARGET VPS                                       │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐   │
+│  │ 30+ Tools    │  │ zsh + p10k   │  │ AI Agents    │  │ ~/.acfs/     │   │
+│  │ Installed    │  │ Shell Config │  │ Claude/Codex │  │ Configurations│  │
+│  └──────────────┘  └──────────────┘  └──────────────┘  └──────────────┘   │
+└───────────────────────────────────────────────────────────────────────────┘
 ```
 
 ### Why This Architecture?
@@ -1204,6 +1197,296 @@ Currently, ACFS installs the full suite. Future versions will support:
 
 ---
 
+## Why ACFS Exists
+
+### The Problem: The Agentic Coding Barrier
+
+The rise of AI coding agents (Claude Code, Codex CLI, Gemini CLI) has created a new paradigm in software development. These agents can write code, debug issues, and even architect solutions—but only if they have the right environment.
+
+**The barrier isn't the agents themselves.** It's the **hours of setup** required to create an environment where agents can actually be productive:
+
+```
+┌────────────────────────────────────────────────────────────────────────────┐
+│  TIME INVESTMENT WITHOUT ACFS                                               │
+│                                                                              │
+│  VPS Setup ..................... 30-60 min                                   │
+│  Shell Configuration ........... 20-30 min                                   │
+│  Language Runtimes ............. 30-45 min                                   │
+│  Dev Tools ..................... 20-30 min                                   │
+│  Agent Installation ............ 15-30 min                                   │
+│  Agent Configuration ........... 20-40 min                                   │
+│  Coordination Tools ............ 30-60 min                                   │
+│  Troubleshooting ............... 30-120 min                                  │
+│  ─────────────────────────────────────────                                   │
+│  TOTAL: 3-7 hours (and that's if everything works)                          │
+│                                                                              │
+│  TIME INVESTMENT WITH ACFS                                                   │
+│                                                                              │
+│  Run one command ............... 25-30 min                                   │
+│  ─────────────────────────────────────────                                   │
+│  TOTAL: 30 minutes                                                           │
+└────────────────────────────────────────────────────────────────────────────┘
+```
+
+**ACFS eliminates this barrier entirely.** One command, 30 minutes, fully configured.
+
+### The Deeper Problem: Beginners Can't Start
+
+For experienced developers, the setup is tedious but doable. For beginners—the people who would benefit *most* from AI coding assistance—it's an insurmountable wall:
+
+- What's SSH? How do I generate keys?
+- What's a VPS? How do I rent one?
+- What's a terminal? Which one should I use?
+- How do I connect to a remote server?
+- What are all these tools and why do I need them?
+
+The [wizard website at agent-flywheel.com](https://agent-flywheel.com) solves this by providing:
+
+1. **Absolute beginner guidance** — Explains every concept in plain English
+2. **OS-specific instructions** — Detects Mac vs Windows, shows the right commands
+3. **Visual confirmations** — Checkboxes for each step, copy buttons for commands
+4. **Troubleshooting help** — Expandable sections for common problems
+5. **Progress persistence** — Resume where you left off across browser sessions
+
+---
+
+## The 10x Multiplier Effect
+
+ACFS isn't just a collection of tools—it's a **carefully curated system** where each component amplifies the others. The value isn't additive; it's multiplicative.
+
+### Tool Synergy Model
+
+```
+                              ┌─────────────────┐
+                              │   PRODUCTIVITY  │
+                              │   MULTIPLIER    │
+                              └────────┬────────┘
+                                       │
+         ┌─────────────────────────────┼─────────────────────────────┐
+         │                             │                             │
+         ▼                             ▼                             ▼
+┌─────────────────┐         ┌─────────────────┐         ┌─────────────────┐
+│  ENVIRONMENT    │         │    AGENTS       │         │  COORDINATION   │
+│  LAYER          │         │    LAYER        │         │  LAYER          │
+├─────────────────┤         ├─────────────────┤         ├─────────────────┤
+│ • zsh + p10k    │────────▶│ • Claude Code   │────────▶│ • Agent Mail    │
+│ • tmux          │         │ • Codex CLI     │         │ • NTM           │
+│ • Modern CLI    │         │ • Gemini CLI    │         │ • SLB           │
+│ • Language VMs  │         │                 │         │ • Beads Viewer  │
+└─────────────────┘         └─────────────────┘         └─────────────────┘
+         │                             │                             │
+         │    Each layer enables       │    Agents become more      │
+         │    the next layer           │    powerful together       │
+         └─────────────────────────────┴─────────────────────────────┘
+```
+
+### Why These Specific Tools?
+
+Every tool in ACFS earns its place through **concrete productivity gains**:
+
+| Tool | Individual Value | Synergy Value |
+|------|-----------------|---------------|
+| **tmux** | Persistent sessions | Agents can work while you're disconnected |
+| **NTM** | Organized sessions | One command spawns 10 agents in named windows |
+| **Agent Mail** | Message passing | Agents coordinate without conflicts |
+| **SLB** | Two-person rule | Dangerous operations require confirmation |
+| **Beads Viewer** | Task tracking | Agents can see project state, avoid rework |
+| **atuin** | Shell history | Search commands across sessions, share patterns |
+| **zoxide** | Smart cd | `z proj` beats `cd ~/projects/my-long-name` |
+| **ripgrep** | Fast search | Agents find code 100x faster than grep |
+| **fzf** | Fuzzy finding | Interactive selection instead of typing paths |
+
+### The Compounding Effect
+
+A single agent with basic tooling is useful. Three agents with:
+- A shared project structure
+- Coordination via Agent Mail
+- Orchestration via NTM
+- Safety guardrails via SLB
+- Task visibility via Beads
+
+...can accomplish in one day what would take a solo developer a week.
+
+**This is the flywheel effect in action.** Better tools → more capable agents → more code shipped → better understanding of what tools are needed → better tools.
+
+---
+
+## Design Algorithms & Decisions
+
+ACFS implements several algorithmic patterns that ensure reliability and maintainability.
+
+### Idempotency Algorithm
+
+Every installation function follows the **check-before-install** pattern:
+
+```bash
+install_tool() {
+    if command_exists "tool"; then
+        log_success "tool already installed"
+        return 0
+    fi
+
+    # ... installation logic ...
+
+    if command_exists "tool"; then
+        log_success "tool installed successfully"
+        return 0
+    else
+        log_error "tool installation failed"
+        return 1
+    fi
+}
+```
+
+This guarantees:
+1. **Safe re-runs** — Running the installer twice doesn't break anything
+2. **Resume capability** — Failures don't require starting over
+3. **Declarative intent** — The end state is defined, not the transition
+
+### Checksum Verification Algorithm
+
+The security system uses **content-addressable verification**:
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│  VERIFICATION FLOW                                                       │
+│                                                                          │
+│  1. Download script to memory (not disk)                                 │
+│  2. Calculate SHA256 of downloaded content                               │
+│  3. Compare against stored hash in checksums.yaml                        │
+│  4. If match → execute                                                   │
+│  5. If mismatch → refuse execution, report discrepancy                   │
+│                                                                          │
+│  Key insight: We verify CONTENT, not just transport                      │
+│  (HTTPS only protects the channel, not the content at source)            │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+### Manifest-Driven Generation
+
+The generator uses a **template expansion** pattern:
+
+1. **Parse** — Read YAML manifest, validate with Zod schemas
+2. **Transform** — Convert manifest entries to installation functions
+3. **Group** — Organize by category (base, shell, cli, lang, agents, etc.)
+4. **Generate** — Emit Bash scripts with consistent structure
+5. **Verify** — Generate doctor checks from verification commands
+
+This ensures the manifest is the **single source of truth**—no drift between documentation, installer, and verification.
+
+### Progressive Disclosure in the Wizard
+
+The wizard website implements **progressive disclosure** for complexity management:
+
+```
+Level 1: Core instructions (visible by default)
+├── Copy this command
+├── Paste in terminal
+└── Press Enter
+
+Level 2: Troubleshooting (expandable)
+├── "Permission denied" → fix instructions
+├── "Command not found" → prerequisites
+└── "Connection refused" → diagnostics
+
+Level 3: Deep explanations (collapsible "Beginner Guide")
+├── What is SSH?
+├── What is a VPS?
+├── Why these specific steps?
+└── What happens under the hood?
+```
+
+This allows beginners to get deep context when needed, while experts can skip straight to the commands.
+
+---
+
+## Multi-Agent Orchestration Model
+
+ACFS is designed for **multi-agent workflows** where several AI coding agents work on the same project simultaneously.
+
+### The Coordination Problem
+
+Without coordination, multiple agents cause chaos:
+- **File conflicts** — Two agents edit the same file
+- **Duplicated work** — Agents solve the same problem independently
+- **Communication gaps** — No visibility into what others are doing
+- **Safety risks** — Dangerous operations without oversight
+
+### The ACFS Solution Stack
+
+```
+┌───────────────────────────────────────────────────────────────────────────┐
+│                         AGENT COORDINATION LAYER                           │
+│                                                                             │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐       │
+│  │ Agent Mail  │  │    NTM      │  │    SLB      │  │   Beads     │       │
+│  │ (Messaging) │  │ (Sessions)  │  │ (Safety)    │  │ (Tasks)     │       │
+│  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘       │
+│         │                │                │                │               │
+│         │   ┌────────────┴────────────────┴────────────────┘               │
+│         │   │                                                              │
+│         ▼   ▼                                                              │
+│  ┌──────────────────────────────────────────────────────────────────────┐ │
+│  │                      FILE RESERVATION SYSTEM                          │ │
+│  │                                                                        │ │
+│  │  Agent A reserves: src/auth/**                                         │ │
+│  │  Agent B reserves: src/api/**                                          │ │
+│  │  Agent C reserves: tests/**                                            │ │
+│  │                                                                        │ │
+│  │  → No conflicts, parallel progress                                     │ │
+│  └──────────────────────────────────────────────────────────────────────┘ │
+└───────────────────────────────────────────────────────────────────────────┘
+```
+
+### Agent Communication Patterns
+
+**1. Direct Messaging (Agent Mail)**
+```
+Agent A → Agent B: "I finished the auth module, ready for API integration"
+Agent B → Agent A: "ACK, starting API integration with auth dependency"
+```
+
+**2. Broadcast Updates (Thread Summaries)**
+```
+Thread: "Sprint 23 Tasks"
+├── Agent A: "Claimed user-registration feature"
+├── Agent B: "Claimed api-endpoints feature"
+├── Agent C: "Claimed test-coverage task"
+└── All agents see project state
+```
+
+**3. File Reservations (Conflict Prevention)**
+```
+Agent A: reserve_paths(["src/auth/*"], exclusive=true, ttl=3600)
+Agent B: reserve_paths(["src/auth/*"]) → CONFLICT: held by Agent A
+Agent B: reserve_paths(["src/api/*"]) → GRANTED
+```
+
+### The NTM Orchestration Pattern
+
+Named Tmux Manager (NTM) enables the **one-command swarm spawn**:
+
+```bash
+# Spawn 10 agents, each in a named tmux window
+ntm spawn \
+  --count 10 \
+  --prefix "agent-" \
+  --command "claude --dangerously-skip-permissions"
+```
+
+Result:
+```
+tmux session: acfs-swarm
+├── agent-1: Claude working on auth
+├── agent-2: Claude working on api
+├── agent-3: Claude working on tests
+├── agent-4: Codex reviewing PRs
+├── agent-5: Gemini writing docs
+└── ...
+```
+
+---
+
 ## Philosophy
 
 ### The Flywheel
@@ -1246,6 +1529,7 @@ MIT License. See [LICENSE](LICENSE) for details.
 
 ## Links
 
+- **Website:** [agent-flywheel.com](https://agent-flywheel.com) — Interactive wizard for beginners
 - **GitHub:** [Dicklesworthstone/agentic_coding_flywheel_setup](https://github.com/Dicklesworthstone/agentic_coding_flywheel_setup)
 - **Related Projects:**
   - [ntm](https://github.com/Dicklesworthstone/ntm) - Named Tmux Manager
