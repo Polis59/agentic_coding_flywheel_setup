@@ -152,9 +152,9 @@ export async function POST(request: NextRequest) {
       events: body.events.map(event => ({
         name: event.name,
         params: {
-          ...event.params,
           engagement_time_msec: 100,
           session_id: body.client_id.split('.')[0] || Date.now().toString(),
+          ...event.params,
         },
       })),
       ...(body.user_id && { user_id: body.user_id }),

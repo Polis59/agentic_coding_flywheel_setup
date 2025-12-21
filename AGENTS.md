@@ -57,7 +57,11 @@ ACFS is a **multi-component project** consisting of:
 
 ### B) Installer (`install.sh` + `scripts/`)
 - **Language:** Bash (POSIX-compatible where possible)
-- **Target:** Ubuntu 25.x (gracefully supports 24.04 LTS+)
+- **Target:** Ubuntu 25.10 (auto-upgrades from 22.04+ via sequential do-release-upgrade)
+- **Auto-Upgrade:** Older Ubuntu versions are automatically upgraded to 25.10 before ACFS install
+  - Upgrade path: 22.04 → 24.04 → 24.10 → 25.04 → 25.10
+  - Takes 30-60 minutes per version hop; multiple reboots handled via systemd resume service
+  - Skip with `--skip-ubuntu-upgrade` flag
 - **One-liner:** `curl -fsSL ... | bash -s -- --yes --mode vibe`
 - **Idempotent:** Safe to re-run
 - **Checkpointed:** Phases resume on failure
@@ -177,7 +181,9 @@ Rules:
 
 ## Third-Party Tools Installed by ACFS
 
-These are installed on target VPS (not development machine):
+These are installed on target VPS (not development machine).
+
+> **OS Requirement:** Ubuntu 25.10 (installer auto-upgrades from 22.04+; see Installer section above)
 
 ### Shell & Terminal UX
 - **zsh** + **oh-my-zsh** + **powerlevel10k**
