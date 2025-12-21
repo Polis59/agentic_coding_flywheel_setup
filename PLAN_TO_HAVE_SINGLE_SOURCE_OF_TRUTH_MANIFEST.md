@@ -2,7 +2,19 @@
 
 ## Executive Summary
 
-Transform the manifest system from "documentation that generates unused scripts" into the **actual driver** of installation. The manifest becomes the canonical definition of what gets installed, and `install.sh` becomes a thin orchestration layer that sources generated module installers.
+Transform the manifest system from "documentation that generates unused scripts" into the **actual driver** of installation.
+
+The manifest becomes the canonical definition of:
+- what gets installed
+- how it gets installed (including run-as + verified upstream installers)
+- how it is verified (doctor checks)
+- how it is selected/filtered (only/skip/phase with dependency closure)
+
+`install.sh` becomes a thin orchestration layer that:
+- bootstraps a **self-consistent** copy of the repo in `curl|bash` mode (single archive download; no piecemeal raw-file sourcing)
+- sources shared libs + generated installers (as local files)
+- performs hand-maintained orchestration steps (user normalization, finalization, UX)
+- calls generated module functions in a deterministic order
 
 ## Project Policies (Non-Negotiable)
 
@@ -10,6 +22,24 @@ Transform the manifest system from "documentation that generates unused scripts"
 - **`curl | bash` is the primary entrypoint:** The design must work when `install.sh` runs without a local checkout (i.e., `SCRIPT_DIR` may be empty).
 - **Generated scripts are libraries:** Generated `scripts/generated/*.sh` must be safely `source`-able (no global `set -euo pipefail`, no top-level side effects, and contract validation must `return`, not `exit`).
 - **Deterministic generation:** Generated scripts must not embed timestamps or non-deterministic content; CI drift checks require stable output for a given manifest input.
+- **No implicit “set -e” landmines:** Generated module functions must explicitly handle errors (so `install.sh` can keep strict mode without optional modules accidentally terminating the whole run).
+- **Bootstrap must be atomic + validated before sourcing:** Never `source` partially-downloaded files. Download → validate (`bash -n`) → atomically rename → then `source`.
+- **CLI compatibility:** Existing installer flags and wizard flows must continue to work. New generic `--only/--skip` is additive; any legacy flags must be implemented as wrappers over manifest-driven selection (no behavior drift).
+
+## Non-Goals
+
+- Not rewriting the installer in TypeScript or requiring Bun on the target VPS before base packages are installed.
+- Not supporting non-Ubuntu targets.
+- Not building a backend service for installs (installer remains standalone Bash).
+- Not changing the “internal-only maintenance” posture.
+
+## Definitions
+
+- **Module:** A single manifest-defined unit of installation + verification (`id`, `install`, `verify`, etc.).
+- **Orchestration step:** Hand-maintained installer logic that is intentionally *not* a module (e.g., root→ubuntu normalization).
+- **Phase:** A coarse install ordering group (1–10). Modules must declare a phase (or be orchestration-only).
+- **Category:** A human grouping (base/shell/lang/etc). Useful for generated file layout, not ordering.
+- **Verified installer:** An upstream script executed only after HTTPS + SHA256 verification against `checksums.yaml`.
 
 ---
 
@@ -61,7 +91,7 @@ Transform the manifest system from "documentation that generates unused scripts"
 │  ┌──────────────────────────────────────────────────────────┐   │
 │  │              install.sh (THIN ORCHESTRATOR)               │   │
 │  │  - Sources generated scripts                              │   │
-│  │  - curl|bash: downloads libs+generated then sources them   │   │
+│  │  - curl|bash: downloads archive then sources extracted     │   │
 │  │  - Handles phases, user normalization, filesystem         │   │
 │  │  - Calls: install_lang_bun, install_agents_claude, etc.   │   │
 │  │  - NO module-specific installation logic                  │   │
@@ -97,9 +127,16 @@ Generated scripts have a strict contract with install.sh. This contract MUST be 
 
 When users run ACFS via `curl … | bash`, there is **no local repository checkout**, so `SCRIPT_DIR` may be empty. In that mode, the orchestrator must:
 
-1. Determine a local bootstrap directory (e.g., `/tmp/acfs-bootstrap-*` initially, then optionally mirror into `$ACFS_HOME/scripts/` once `$ACFS_HOME` exists).
-2. Download the **runtime libraries** (`scripts/lib/*.sh`) and **generated installers** (`scripts/generated/*.sh`) from `ACFS_RAW` into that directory.
-3. `source` those local paths (never `source <(curl …)`).
+1. Determine a local bootstrap directory (`mktemp -d`), and optionally mirror into `$ACFS_HOME/cache/bootstrap/<ref>/` for re-runs.
+2. Download a **single repo archive** (tar.gz) for a single ref (tag/sha/branch) to guarantee a self-consistent set of files.
+3. Extract only what the installer needs:
+   - `scripts/lib/**`
+   - `scripts/generated/**`
+   - `acfs/**` (assets deployed to `~/.acfs/`)
+   - `checksums.yaml`
+   - `acfs.manifest.yaml` (for coherence checks)
+4. Validate extracted shell scripts with `bash -n` before sourcing them.
+5. `source` only **local files** from the extracted tree (never process substitution).
 
 Generated scripts must assume they are being sourced from **local files** (either from a git checkout or from a bootstrap download directory).
 
@@ -110,9 +147,20 @@ If `ACFS_RAW` points at `.../main`, it is theoretically possible (rare, but real
 - Prefer a **tag** or **commit SHA** in `ACFS_RAW` (e.g., `.../<tag>/...` or `.../<sha>/...`).
 - Optionally add an `ACFS_REF` variable (default: `main`) and set `ACFS_RAW="https://raw.githubusercontent.com/<owner>/<repo>/$ACFS_REF"`.
 
+**Stronger reliability guarantee (recommended):** In `curl|bash` mode, prefer fetching a single GitHub archive for `ACFS_REF` over multiple raw-file requests. This guarantees all files come from the same commit snapshot, even if `main` advances during the install.
+
+### Bootstrap Coherence Check (Prevents “mixed refs”)
+
+After bootstrapping, compute:
+- `MANIFEST_SHA256 := sha256(acfs.manifest.yaml)`
+
+Then verify that each generated installer header contains the same manifest SHA. If mismatch is detected, abort early with a clear error:
+- “Bootstrap mismatch: generated scripts do not match manifest (mixed ref or stale generated output).”
+
 ### Required Environment Variables
 
-Generated scripts expect these variables to be set by install.sh BEFORE sourcing:
+Generated scripts must be **sourceable without** these variables set.
+These variables must be set by install.sh **before invoking any generated module function**:
 
 ```bash
 # User context
@@ -125,14 +173,22 @@ MODE="vibe"                       # vibe | safe
 DRY_RUN="false"                   # true | false
 SUDO="sudo"                       # sudo command (empty if root)
 
-# Remote source location (required when SCRIPT_DIR is empty)
-ACFS_RAW="https://raw.githubusercontent.com/<owner>/<repo>/main"
+# Repo identity (used for curl|bash bootstrap)
+ACFS_REPO_OWNER="Dicklesworthstone"
+ACFS_REPO_NAME="agentic_coding_flywheel_setup"
+ACFS_REF="main"                   # branch | tag | sha
+
+# Remote source location (optional if archive bootstrap is used)
+ACFS_RAW="https://raw.githubusercontent.com/${ACFS_REPO_OWNER}/${ACFS_REPO_NAME}/${ACFS_REF}"
 
 # Paths (local checkout vs curl|bash)
 SCRIPT_DIR="/path/to/installer"         # Directory containing install.sh (may be empty under curl|bash)
 ACFS_BOOTSTRAP_DIR="/tmp/acfs-bootstrap" # Local dir containing downloaded scripts when SCRIPT_DIR is empty (should be unique per run)
 ACFS_LIB_DIR="$ACFS_BOOTSTRAP_DIR/scripts/lib"
 ACFS_GENERATED_DIR="$ACFS_BOOTSTRAP_DIR/scripts/generated"
+ACFS_ASSETS_DIR="$ACFS_BOOTSTRAP_DIR/acfs"
+ACFS_CHECKSUMS_YAML="$ACFS_BOOTSTRAP_DIR/checksums.yaml"
+ACFS_MANIFEST_YAML="$ACFS_BOOTSTRAP_DIR/acfs.manifest.yaml"
 ```
 
 ### Required Functions
@@ -156,7 +212,11 @@ command_exists_as_target <cmd>    # Check command exists in TARGET_USER environm
 command_exists <cmd>              # Check if command is in PATH
 
 # Module filtering (from scripts/lib/install_helpers.sh)
+# (should_run_module is pure; it must not mutate global selection state)
 should_run_module "<id>" "<phase>"
+
+# Contract (from scripts/lib/contract.sh)
+acfs_require_contract "<context>"   # Validate runtime vars + required functions; returns nonzero on violation
 
 # Assets / fetching (from install.sh or scripts/lib/security.sh)
 acfs_curl <args...>               # Curl wrapper enforcing HTTPS where possible
@@ -170,21 +230,29 @@ acfs_run_verified_upstream_script_as_current "<tool>" "<runner>" [args...]
 
 ### Contract Validation
 
-Generator will produce a header that validates the contract:
+Contract validation should be centralized in a shared lib so it is consistent across:
+- install.sh orchestration
+- generated scripts
+- future doctor/update integrations
+
+Add: `scripts/lib/contract.sh`:
 
 ```bash
-# Generated script header
-_acfs_validate_contract() {
+acfs_require_contract() {
+    local context="${1:-generated}"
     local missing=()
     [[ -z "${TARGET_USER:-}" ]] && missing+=("TARGET_USER")
     [[ -z "${TARGET_HOME:-}" ]] && missing+=("TARGET_HOME")
     [[ -z "${MODE:-}" ]] && missing+=("MODE")
 
-    # Under curl|bash, install.sh must set ACFS_RAW and download generated scripts locally.
+    # Under curl|bash, install.sh must bootstrap a local tree (archive extract) and set ACFS_* paths.
     if [[ -z "${SCRIPT_DIR:-}" ]]; then
-        [[ -z "${ACFS_RAW:-}" ]] && missing+=("ACFS_RAW")
+        [[ -z "${ACFS_BOOTSTRAP_DIR:-}" ]] && missing+=("ACFS_BOOTSTRAP_DIR")
         [[ -z "${ACFS_LIB_DIR:-}" ]] && missing+=("ACFS_LIB_DIR")
         [[ -z "${ACFS_GENERATED_DIR:-}" ]] && missing+=("ACFS_GENERATED_DIR")
+        [[ -z "${ACFS_ASSETS_DIR:-}" ]] && missing+=("ACFS_ASSETS_DIR")
+        [[ -z "${ACFS_CHECKSUMS_YAML:-}" ]] && missing+=("ACFS_CHECKSUMS_YAML")
+        [[ -z "${ACFS_MANIFEST_YAML:-}" ]] && missing+=("ACFS_MANIFEST_YAML")
     fi
 
     if ! declare -f log_detail >/dev/null 2>&1; then
@@ -204,23 +272,35 @@ _acfs_validate_contract() {
     fi
 
     if [[ ${#missing[@]} -gt 0 ]]; then
-        echo "ERROR: Generated script contract violation!" >&2
+        echo "ERROR: ACFS contract violation (${context})" >&2
         echo "Missing: ${missing[*]}" >&2
-        echo "Fix: install.sh must source scripts/lib/*.sh, set environment vars, and only then source scripts/generated/*.sh" >&2
+        echo "Fix: install.sh must source scripts/lib/*.sh, set required vars, and only then invoke generated module functions." >&2
         return 1
     fi
+    return 0
 }
-_acfs_validate_contract || return 1
 ```
+
+Generated module functions must call:
+
+```bash
+acfs_require_contract "module:${module_id}" || return 1
+```
+
+...at the top of each function (not at source-time), so scripts remain sourceable for `--list-modules` and for early argument parsing.
 
 ---
 
 ## Description-Only Modules Strategy
 
-Some manifest modules have "description" install commands rather than actual bash:
+Some manifest modules currently contain prose inside `install:`. This is ambiguous and brittle. Replace prose-in-install with **explicit fields**:
+- `notes:` for human prose
+- `generated: false` for orchestration-only modules
+
+**Rule:** If `generated: true`, every `install:` entry must be executable shell (or `install: []` with `verified_installer`).
 
 ```yaml
-# PROBLEM: This is a description, not a command
+# PROBLEM (legacy): prose mixed into install
 - id: users.ubuntu
   install:
     - "Ensure user ubuntu exists with home /home/ubuntu"
@@ -230,14 +310,13 @@ Some manifest modules have "description" install commands rather than actual bas
 ### Detection Heuristic
 
 ```typescript
-function isDescription(cmd: string): boolean {
+// IMPORTANT: YAML quoting does NOT imply description. Commands are often quoted.
+// Use heuristics ONLY for lint warnings (never for behavior).
+function looksLikeProse(cmd: string): boolean {
   const trimmed = cmd.trim();
 
-  // Starts with quoted text
-  if (trimmed.startsWith('"') && trimmed.endsWith('"')) return true;
-
-  // Starts with capital letter followed by lowercase (sentence case)
-  if (/^[A-Z][a-z]/.test(trimmed)) return true;
+  // Explicit markers (recommended for temporary placeholders during migration)
+  if (/^(TODO:|NOTE:)/.test(trimmed)) return true;
 
   // Contains prose-like patterns
   if (/\b(Ensure|Install|Create|Write|Copy|Add|Set up)\b/i.test(trimmed)) {
@@ -255,11 +334,11 @@ function isDescription(cmd: string): boolean {
 
 | Strategy | When to Use | Example |
 |----------|-------------|---------|
-| `generated: false` | Complex orchestration that can't be scripted | users.ubuntu |
+| Move prose to `notes:` | Human guidance, operator notes | users.ubuntu (notes) |
+| `generated: false` | Orchestration handled by install.sh | users.ubuntu |
 | Convert to commands | Simple actions that can be expressed as bash | base.filesystem |
-| `# TODO:` comment | Placeholder for manual implementation | tools.vault |
 
-**Important:** Heuristics should be used for **warnings and validation**, not as silent behavior changes. A module should only skip generation when it explicitly sets `generated: false`.
+**Important:** Heuristics are for **warnings only**. Generator behavior must be based on explicit manifest fields.
 
 ### Schema Addition
 
@@ -267,8 +346,8 @@ function isDescription(cmd: string): boolean {
 - id: users.ubuntu
   description: User normalization
   generated: false  # NEW: Skip generation, handled by install.sh orchestration
-  install:
-    - "Ensure user ubuntu exists"
+  notes:
+    - "Handled by install.sh: root→ubuntu normalization, SSH key migration, sudoers config"
   verify:
     - id ubuntu
 ```
@@ -280,12 +359,12 @@ function shouldGenerateModule(module: Module): boolean {
   // Explicit opt-out
   if (module.generated === false) return false;
 
-  // Fail fast: a generated module must have at least one executable install step.
+  // Fail fast: a generated module must have either a verified installer OR executable install steps.
   //
   // NOTE: module.install may be empty when verified_installer is provided.
   const hasExecutableInstall =
     module.verified_installer != null ||
-    module.install.some((cmd) => !isDescription(cmd));
+    module.install.length > 0;
 
   if (!hasExecutableInstall) {
     throw new Error(
@@ -295,10 +374,10 @@ function shouldGenerateModule(module: Module): boolean {
   }
 
   // Warn if any install step looks like prose (helps keep manifest clean)
-  if (module.install.length > 0 && module.install.some(isDescription)) {
+  if (module.install.length > 0 && module.install.some(looksLikeProse)) {
     console.warn(
-      `Warning: module ${module.id} contains description-like install steps. ` +
-      `Prefer real commands or mark generated: false.`
+      `Warning: module ${module.id} contains prose-like install steps. ` +
+      `Move prose to notes:, or mark generated: false.`
     );
   }
 
@@ -346,6 +425,12 @@ function toFunctionName(moduleId: string): string {
 }
 ```
 
+### Also Prevent Collisions With Orchestrator Functions
+
+Generator must also validate that generated function names do not collide with a reserved list:
+- `main`, `parse_args`, `normalize_user`, `finalize`, etc.
+Fail fast with an actionable error message.
+
 ### Manifest Schema Validation
 
 Also prevent collisions at schema level:
@@ -384,6 +469,7 @@ Generated scripts must respect DRY_RUN mode for testing:
 ```bash
 install_lang_bun() {
     local module_id="lang.bun"
+    acfs_require_contract "module:${module_id}" || return 1
 
     # Installed check (runs even in dry-run to show current state)
     if run_as_target_shell "command -v bun >/dev/null 2>&1"; then
@@ -401,7 +487,10 @@ install_lang_bun() {
     log_detail "Installing $module_id"
 
     # Actual installation
-    acfs_run_verified_upstream_script_as_target "bun" "bash"
+    if ! acfs_run_verified_upstream_script_as_target "bun" "bash"; then
+        log_error "$module_id install failed"
+        return 1
+    fi
 
     # Verification
     if ! run_as_target_shell "bun --version >/dev/null 2>&1"; then
@@ -422,6 +511,7 @@ function generateModuleFunction(module: Module): string {
 
   lines.push(`${funcName}() {`);
   lines.push(`    local module_id="${module.id}"`);
+  lines.push(`    acfs_require_contract "module:${module.id}" || return 1`);
 
   // Installed check (always runs; run_as-aware)
   if (module.installed_check) {
@@ -446,7 +536,7 @@ function generateModuleFunction(module: Module): string {
     );
   } else {
     for (const cmd of module.install) {
-      if (!isDescription(cmd)) {
+      if (!looksLikeProse(cmd)) {
         lines.push(`        log_detail "dry-run: would run: ${escapeBashForLog(cmd)}"`);
       }
     }
@@ -482,15 +572,28 @@ function generateModuleFunction(module: Module): string {
 
 # Show what would be installed (combines with --only/--skip)
 ./install.sh --dry-run --only lang.bun
+
+# Advanced: do NOT auto-run dependency closure (expert-only debugging)
+./install.sh --only lang.bun --no-deps
+
+# Print the effective execution plan (after filters + deps)
+./install.sh --print-plan --only lang.bun
 ```
 
 ### Implementation in install.sh
 
 ```bash
-# Argument parsing
+# Selection resolution (done once) + cheap predicate during execution
+#
+# 1) parse args into ONLY_* / SKIP_*
+# 2) compute EFFECTIVE set with dependency closure (unless --no-deps)
+# 3) should_run_module becomes a simple membership test
+
 ONLY_MODULES=()
 ONLY_PHASES=()
 SKIP_MODULES=()
+NO_DEPS="false"
+PRINT_PLAN="false"
 
 parse_args() {
     while [[ $# -gt 0 ]]; do
@@ -507,6 +610,14 @@ parse_args() {
                 IFS=',' read -ra SKIP_MODULES <<< "$2"
                 shift 2
                 ;;
+            --no-deps)
+                NO_DEPS="true"
+                shift
+                ;;
+            --print-plan)
+                PRINT_PLAN="true"
+                shift
+                ;;
             --list-modules)
                 list_all_modules
                 exit 0
@@ -516,33 +627,20 @@ parse_args() {
     done
 }
 
-# Check if module should run
+# Effective selection computed once after scripts/generated/manifest_index.sh is sourced
+declare -A ACFS_EFFECTIVE_RUN=()
+
+acfs_resolve_selection() {
+    # Uses generated manifest index (module->phase, module->deps).
+    # Expands ONLY_MODULES/ONLY_PHASES into a set, then adds dependency closure.
+    # Errors if SKIP removes a required dependency (unless explicitly allowed).
+    :
+}
+
 should_run_module() {
     local module_id="$1"
-    local phase="$2"
-
-    # Skip if in skip list
-    for skip in "${SKIP_MODULES[@]}"; do
-        [[ "$module_id" == "$skip" ]] && return 1
-    done
-
-    # If --only specified, only run those
-    if [[ ${#ONLY_MODULES[@]} -gt 0 ]]; then
-        for only in "${ONLY_MODULES[@]}"; do
-            [[ "$module_id" == "$only" ]] && return 0
-        done
-        return 1
-    fi
-
-    # If --only-phase specified, only run those phases
-    if [[ ${#ONLY_PHASES[@]} -gt 0 ]]; then
-        for only_phase in "${ONLY_PHASES[@]}"; do
-            [[ "$phase" == "$only_phase" ]] && return 0
-        done
-        return 1
-    fi
-
-    return 0
+    [[ -n "${ACFS_EFFECTIVE_RUN[$module_id]:-}" ]] && return 0
+    return 1
 }
 ```
 
@@ -552,6 +650,7 @@ should_run_module() {
 install_lang_bun() {
     local module_id="lang.bun"
     local module_phase="6"
+    acfs_require_contract "module:${module_id}" || return 1
 
     # Check if this module should run
     if ! should_run_module "$module_id" "$module_phase"; then
@@ -592,6 +691,8 @@ install_lang_bun() {
 - [ ] **1.1.4** Document all `acfs_run_verified_upstream_script_as_target` usages
 - [ ] **1.1.5** Audit checksums.yaml for completeness against manifest modules
 - [ ] **1.1.6** Identify all description-only modules and decide: `generated: false` or convert to commands
+- [ ] **1.1.7** Inventory existing install.sh CLI flags used by the wizard/docs and map them to manifest-driven selection (tags/modules)
+- [ ] **1.1.8** Inventory assets required at runtime (`acfs/**`, templates, onboarding lessons) so curl|bash bootstrap includes them
 
 **Deliverable:** `docs/manifest-gap-analysis.md` with complete mapping
 
@@ -606,6 +707,7 @@ install_lang_bun() {
 modules:
   - id: lang.bun
     description: Bun runtime for JS tooling
+    category: lang                 # keep category explicit (for generated file layout)
 
     # NEW: Execution context
     run_as: target_user          # target_user | root | current
@@ -618,6 +720,7 @@ modules:
 
     # NEW: Installation behavior
     optional: false              # If true, failure is warning not error
+    enabled_by_default: true     # NEW: allows manifest-driven defaults without removing modules
     installed_check:
       run_as: target_user
       command: "command -v bun"  # Skip if this succeeds (always runs, even in --dry-run)
@@ -635,6 +738,9 @@ modules:
     # NEW: Dependencies (for topological sort)
     dependencies:
       - base.system
+
+    # NEW: Tags for higher-level CLI flags (wizard compatibility)
+    tags: ["lang", "runtime"]
 ```
 
 ### 2.2 Schema Changes in Zod
@@ -645,6 +751,8 @@ modules:
 export const ModuleSchema = z.object({
   id: z.string().regex(/^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)*$/),
   description: z.string(),
+
+  category: z.string().optional(),
 
   // Execution context
   run_as: z.enum(['target_user', 'root', 'current']).default('target_user'),
@@ -658,6 +766,7 @@ export const ModuleSchema = z.object({
 
   // Installation behavior
   optional: z.boolean().default(false),
+  enabled_by_default: z.boolean().default(true),
   installed_check: z.object({
     run_as: z.enum(['target_user', 'root', 'current']).default('target_user'),
     command: z.string(),
@@ -673,9 +782,13 @@ export const ModuleSchema = z.object({
   verify: z.array(z.string()).min(1),
   dependencies: z.array(z.string()).optional(),
   notes: z.array(z.string()).optional(),
+  tags: z.array(z.string()).optional(),
 }).refine((m) => (m.generated === false) || (m.verified_installer != null) || (m.install.length > 0), {
   message: "Module must define verified_installer or install commands (or set generated: false).",
 });
+
+// Optional: enforce that orchestration-only modules do not contain install commands
+// (keeps the manifest clean and avoids drift)
 ```
 
 ### 2.3 Phase + Dependency Ordering Rules
@@ -692,6 +805,18 @@ Rules:
 3. Within a phase, the generator must topologically sort modules using `dependencies` (stable by manifest order for ties).
 4. If a dependency would require “future phase first” (dependency.phase > module.phase), that is a manifest error.
 
+### 2.4 Manifest Index Generation (Enables Filtering + Dependency Closure in Bash)
+
+Generator must also emit a small, sourceable index file:
+`scripts/generated/manifest_index.sh` containing:
+- `ACFS_MANIFEST_SHA256="..."`
+- `declare -A ACFS_MODULE_PHASE=([lang.bun]=6 ...)`
+- `declare -A ACFS_MODULE_DEPS=([lang.bun]="base.system,base.filesystem" ...)`
+- `declare -A ACFS_MODULE_FUNC=([lang.bun]="install_lang_bun" ...)`
+- `ACFS_MODULES_IN_ORDER=(base.system ... lang.bun ...)` (already topo-sorted within phase)
+
+This index must have **no contract validation** and no side effects beyond declarations.
+
 ### 2.3 Tasks for Phase 2
 
 - [ ] **2.1.1** Update `packages/manifest/src/schema.ts` with new fields
@@ -706,6 +831,8 @@ Rules:
 - [ ] **2.2.6** Mark orchestration-only modules with `generated: false`
 - [ ] **2.3.1** Validate dependency+phase rules (no future-phase deps, deps exist)
 - [ ] **2.3.2** Validate manifest against checksums.yaml (all verified_installers have checksums)
+- [ ] **2.4.1** Add manifest_index.sh generation and keep it deterministic
+- [ ] **2.4.2** Add tags + enabled_by_default migration for existing “skip flags”
 
 **Deliverable:** Enhanced manifest schema + fully migrated acfs.manifest.yaml
 
@@ -718,38 +845,12 @@ Rules:
 Each generated `install_<category>.sh` will contain:
 
 ```bash
+# NOTE: This file is meant to be sourced. Shebang is allowed but ignored when sourced.
 #!/usr/bin/env bash
 # AUTO-GENERATED FROM acfs.manifest.yaml - DO NOT EDIT
 # Regenerate: bun run --filter @acfs/manifest generate
 # Manifest SHA256: <sha256-of-acfs.manifest.yaml>
 # Generator: @acfs/manifest <version>
-
-# ============================================================
-# Environment Contract Validation
-# ============================================================
-_acfs_validate_contract() {
-    local missing=()
-    [[ -z "${TARGET_USER:-}" ]] && missing+=("TARGET_USER")
-    [[ -z "${TARGET_HOME:-}" ]] && missing+=("TARGET_HOME")
-    [[ -z "${MODE:-}" ]] && missing+=("MODE")
-
-    if ! declare -f log_detail >/dev/null 2>&1; then
-        missing+=("log_detail function")
-    fi
-    if ! declare -f run_as_target >/dev/null 2>&1; then
-        missing+=("run_as_target function")
-    fi
-    if ! declare -f should_run_module >/dev/null 2>&1; then
-        missing+=("should_run_module function")
-    fi
-
-    if [[ ${#missing[@]} -gt 0 ]]; then
-        echo "ERROR: Generated script contract violation!" >&2
-        echo "Missing: ${missing[*]}" >&2
-        return 1
-    fi
-}
-_acfs_validate_contract || return 1
 
 # ============================================================
 # Module: lang.bun
@@ -758,6 +859,7 @@ _acfs_validate_contract || return 1
 install_lang_bun() {
     local module_id="lang.bun"
     local module_phase="6"
+    acfs_require_contract "module:${module_id}" || return 1
 
     # Check if this module should run (--only/--skip filtering)
     if ! should_run_module "$module_id" "$module_phase"; then
@@ -781,7 +883,10 @@ install_lang_bun() {
     log_detail "Installing $module_id"
 
     # Verified upstream installer (install.sh supplies '-s --')
-    acfs_run_verified_upstream_script_as_target "bun" "bash"
+    if ! acfs_run_verified_upstream_script_as_target "bun" "bash"; then
+        log_error "$module_id install failed"
+        return 1
+    fi
 
     # Verify installation
     if ! run_as_target_shell "bun --version >/dev/null 2>&1"; then
@@ -817,6 +922,7 @@ function generateModuleFunction(module: Module): string {
   lines.push(`${funcName}() {`);
   lines.push(`    local module_id="${module.id}"`);
   lines.push(`    local module_phase="${module.phase ?? 0}"`);
+  lines.push(`    acfs_require_contract "module:${module.id}" || return 1`);
 
   // Module filtering (--only/--skip)
   lines.push(`    if ! should_run_module "$module_id" "$module_phase"; then`);
@@ -831,7 +937,7 @@ function generateModuleFunction(module: Module): string {
       ? 'run_as_target_shell'
       : check.run_as === 'root'
         ? 'run_as_root_shell'
-        : 'bash -lc';
+        : 'run_as_current_shell';
     lines.push(`    if ${checkRunner} "${escapeBashForDoubleQuotes(check.command)} >/dev/null 2>&1"; then`);
     lines.push(`        log_detail "$module_id already installed, skipping"`);
     lines.push(`        return 0`);
@@ -842,7 +948,7 @@ function generateModuleFunction(module: Module): string {
   lines.push(`    if [[ "\${DRY_RUN:-false}" == "true" ]]; then`);
   lines.push(`        log_detail "dry-run: would install $module_id"`);
   for (const cmd of module.install) {
-    if (!isDescription(cmd)) {
+    if (!looksLikeProse(cmd)) {
       lines.push(`        log_detail "dry-run: would run: ${escapeBashForLog(cmd)}"`);
     }
   }
@@ -854,25 +960,46 @@ function generateModuleFunction(module: Module): string {
   // Handle verified installers
   if (module.verified_installer) {
     const { tool, runner, args } = module.verified_installer;
+
+    // Runner must be validated/whitelisted (e.g., bash|sh) to prevent injection.
     if (module.run_as === 'target_user') {
-      lines.push(`    acfs_run_verified_upstream_script_as_target "${tool}" "${runner}" ${args.map(escapeForBash).join(' ')}`.trimEnd());
+      lines.push(`    if ! acfs_run_verified_upstream_script_as_target "${tool}" "${runner}" ${args.map(escapeForBash).join(' ')}`.trimEnd() + `; then`);
+      lines.push(`        ${module.optional ? 'log_warn' : 'log_error'} "$module_id install failed"`);
+      lines.push(`        ${module.optional ? 'return 0' : 'return 1'}`);
+      lines.push(`    fi`);
     } else if (module.run_as === 'root') {
-      lines.push(`    acfs_run_verified_upstream_script_as_root "${tool}" "${runner}" ${args.map(escapeForBash).join(' ')}`.trimEnd());
+      lines.push(`    if ! acfs_run_verified_upstream_script_as_root "${tool}" "${runner}" ${args.map(escapeForBash).join(' ')}`.trimEnd() + `; then`);
+      lines.push(`        ${module.optional ? 'log_warn' : 'log_error'} "$module_id install failed"`);
+      lines.push(`        ${module.optional ? 'return 0' : 'return 1'}`);
+      lines.push(`    fi`);
     } else {
-      lines.push(`    acfs_run_verified_upstream_script_as_current "${tool}" "${runner}" ${args.map(escapeForBash).join(' ')}`.trimEnd());
+      lines.push(`    if ! acfs_run_verified_upstream_script_as_current "${tool}" "${runner}" ${args.map(escapeForBash).join(' ')}`.trimEnd() + `; then`);
+      lines.push(`        ${module.optional ? 'log_warn' : 'log_error'} "$module_id install failed"`);
+      lines.push(`        ${module.optional ? 'return 0' : 'return 1'}`);
+      lines.push(`    fi`);
     }
   } else {
     // Regular install commands
     for (const cmd of module.install) {
-      if (isDescription(cmd)) {
-        lines.push(`    # TODO: ${cmd}`);
-      } else if (module.run_as === 'target_user') {
+      if (looksLikeProse(cmd)) {
+        lines.push(`    # NOTE: ${escapeBashForLog(cmd)}`);
+        lines.push(`    # (move this to notes: or mark generated:false)`);
+        continue;
+      }
+
+      if (module.run_as === 'target_user') {
         // Always execute install strings as shell commands (supports pipes/heredocs).
         lines.push(`    run_as_target_shell << 'ACFS_EOF_${module.id.replace(/[^a-z0-9]/gi, '_')}'`);
         lines.push(cmd);
         lines.push(`ACFS_EOF_${module.id.replace(/[^a-z0-9]/gi, '_')}`);
+      } else if (module.run_as === 'root') {
+        lines.push(`    run_as_root_shell << 'ACFS_EOF_${module.id.replace(/[^a-z0-9]/gi, '_')}'`);
+        lines.push(cmd);
+        lines.push(`ACFS_EOF_${module.id.replace(/[^a-z0-9]/gi, '_')}`);
       } else {
-        lines.push(`    bash -lc ${escapeForBash(cmd)}`);
+        lines.push(`    run_as_current_shell << 'ACFS_EOF_${module.id.replace(/[^a-z0-9]/gi, '_')}'`);
+        lines.push(cmd);
+        lines.push(`ACFS_EOF_${module.id.replace(/[^a-z0-9]/gi, '_')}`);
       }
     }
   }
@@ -886,11 +1013,10 @@ function generateModuleFunction(module: Module): string {
         ? 'run_as_root_shell'
         : 'run_as_current_shell';
 
-    if (module.optional) {
-      lines.push(`    ${verifyRunner} ${escapeForBash(verify)} || log_warn "$module_id verification skipped"`);
-    } else {
-      lines.push(`    ${verifyRunner} ${escapeForBash(verify)} || { log_error "$module_id verification failed"; return 1; }`);
-    }
+    lines.push(`    if ! ${verifyRunner} ${escapeForBash(verify)}; then`);
+    lines.push(`        ${module.optional ? 'log_warn' : 'log_error'} "$module_id verification failed"`);
+    lines.push(`        ${module.optional ? 'return 0' : 'return 1'}`);
+    lines.push(`    fi`);
   }
 
   lines.push(`    log_success "$module_id installed"`);
@@ -908,7 +1034,7 @@ function generateModuleFunction(module: Module): string {
 - [ ] **3.1.4** Add optional module handling (warn vs error)
 - [ ] **3.1.5** Add DRY_RUN mode support
 - [ ] **3.1.6** Add module filtering support (--only/--skip)
-- [ ] **3.2.1** Generate contract validation header
+- [ ] **3.2.1** Add `acfs_require_contract` calls in generated module functions
 - [ ] **3.2.2** Generate module functions that use `run_as_target` correctly
 - [ ] **3.2.3** Generate category functions that call modules in phase order
 - [ ] **3.2.4** Skip modules with `generated: false`
@@ -916,6 +1042,8 @@ function generateModuleFunction(module: Module): string {
 - [ ] **3.3.2** Add `--validate` flag to generator (check manifest against checksums.yaml)
 - [ ] **3.3.3** Add `--diff` flag to show what would change in generated scripts
 - [ ] **3.3.4** Add deterministic metadata to generated file headers (manifest SHA256, generator version)
+- [ ] **3.4.1** Generate `scripts/generated/manifest_index.sh` for dependency closure + module listing
+- [ ] **3.4.2** Generate a machine-readable plan output (optional): `scripts/generated/manifest_index.json`
 
 **Deliverable:** Enhanced generator that produces install.sh-compatible scripts
 
@@ -928,7 +1056,7 @@ function generateModuleFunction(module: Module): string {
 **Critical:** install.sh must support both:
 
 - **Local checkout:** `SCRIPT_DIR` points at a repo clone; `scripts/lib` and `scripts/generated` are available on disk.
-- **curl|bash:** no checkout; install.sh must download `scripts/lib/*.sh` and `scripts/generated/*.sh` from `ACFS_RAW` into a local bootstrap directory, then `source` those local files.
+- **curl|bash:** no checkout; install.sh must download a **single repo archive** for a single ref, extract the required files, validate them (`bash -n`), then `source` those local files.
 
 ```bash
 #!/usr/bin/env bash
@@ -937,36 +1065,42 @@ function generateModuleFunction(module: Module): string {
 
 set -euo pipefail
 
-# SCRIPT_DIR is empty when running via curl|bash (BASH_SOURCE may be unset)
-if [[ -n "${BASH_SOURCE[0]:-}" ]]; then
+# SCRIPT_DIR is empty when running via curl|bash (stdin; no file on disk)
+SCRIPT_DIR=""
+if [[ -n "${BASH_SOURCE[0]:-}" && -f "${BASH_SOURCE[0]}" ]]; then
   SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-else
-  SCRIPT_DIR=""
 fi
 
 bootstrap_sources_if_needed() {
   if [[ -n "$SCRIPT_DIR" ]]; then
     export ACFS_LIB_DIR="$SCRIPT_DIR/scripts/lib"
     export ACFS_GENERATED_DIR="$SCRIPT_DIR/scripts/generated"
+    export ACFS_ASSETS_DIR="$SCRIPT_DIR/acfs"
+    export ACFS_CHECKSUMS_YAML="$SCRIPT_DIR/checksums.yaml"
+    export ACFS_MANIFEST_YAML="$SCRIPT_DIR/acfs.manifest.yaml"
     return 0
   fi
 
-  # curl|bash mode: download libs + generated scripts locally, then source those paths.
-  : "${ACFS_RAW:?ACFS_RAW must be set when running via curl|bash}"
-  # Make the bootstrap dir unique per run to avoid collisions.
-  ACFS_BOOTSTRAP_DIR="${ACFS_BOOTSTRAP_DIR:-/tmp/acfs-bootstrap-$(date +%s)-$RANDOM}"
+  # curl|bash mode: prefer a single repo archive download for self-consistency.
+  : "${ACFS_REPO_OWNER:?}"
+  : "${ACFS_REPO_NAME:?}"
+  : "${ACFS_REF:?}"
+
+  ACFS_BOOTSTRAP_DIR="${ACFS_BOOTSTRAP_DIR:-$(mktemp -d /tmp/acfs-bootstrap-XXXXXX)}"
   export ACFS_LIB_DIR="$ACFS_BOOTSTRAP_DIR/scripts/lib"
   export ACFS_GENERATED_DIR="$ACFS_BOOTSTRAP_DIR/scripts/generated"
-  mkdir -p "$ACFS_LIB_DIR" "$ACFS_GENERATED_DIR"
+  export ACFS_ASSETS_DIR="$ACFS_BOOTSTRAP_DIR/acfs"
+  export ACFS_CHECKSUMS_YAML="$ACFS_BOOTSTRAP_DIR/checksums.yaml"
+  export ACFS_MANIFEST_YAML="$ACFS_BOOTSTRAP_DIR/acfs.manifest.yaml"
 
-  # Download required libs + generated scripts (never source from process substitution).
-  # Example:
-  #   curl -fsSL "$ACFS_RAW/scripts/lib/logging.sh" -o "$ACFS_LIB_DIR/logging.sh"
-  #   curl -fsSL "$ACFS_RAW/scripts/generated/install_lang.sh" -o "$ACFS_GENERATED_DIR/install_lang.sh"
+  # Download archive: https://github.com/<owner>/<repo>/archive/<ref>.tar.gz
+  # Extract, validate, then source.
   #
-  # Reliability tips:
-  #   - Download to a temp file then rename (avoid sourcing partial downloads).
-  #   - Run `bash -n` on downloaded scripts before sourcing to catch truncation.
+  # MUST:
+  # - download to temp file
+  # - validate tarball exists + extract succeeds
+  # - run bash -n scripts/lib/*.sh scripts/generated/*.sh before sourcing
+  # - optional: trap cleanup unless ACFS_KEEP_BOOTSTRAP=1
 }
 
 bootstrap_sources_if_needed
@@ -976,20 +1110,8 @@ bootstrap_sources_if_needed
 # ============================================================
 source "$ACFS_LIB_DIR/logging.sh"
 source "$ACFS_LIB_DIR/security.sh"
+source "$ACFS_LIB_DIR/contract.sh"
 source "$ACFS_LIB_DIR/install_helpers.sh"  # NEW: filtering + run_as_*_shell helpers
-
-# ============================================================
-# Source GENERATED module installers
-# ============================================================
-source "$ACFS_GENERATED_DIR/install_base.sh"
-source "$ACFS_GENERATED_DIR/install_users.sh"
-source "$ACFS_GENERATED_DIR/install_shell.sh"
-source "$ACFS_GENERATED_DIR/install_cli.sh"
-source "$ACFS_GENERATED_DIR/install_lang.sh"
-source "$ACFS_GENERATED_DIR/install_agents.sh"
-source "$ACFS_GENERATED_DIR/install_cloud.sh"
-source "$ACFS_GENERATED_DIR/install_stack.sh"
-source "$ACFS_GENERATED_DIR/install_acfs.sh"
 
 # ============================================================
 # Orchestration (NOT generated - hand-maintained)
@@ -998,6 +1120,19 @@ source "$ACFS_GENERATED_DIR/install_acfs.sh"
 main() {
     parse_args "$@"
     detect_environment
+    # Now that runtime vars exist, source generated installers + manifest index.
+    source "$ACFS_GENERATED_DIR/manifest_index.sh"
+    source "$ACFS_GENERATED_DIR/install_base.sh"
+    source "$ACFS_GENERATED_DIR/install_shell.sh"
+    source "$ACFS_GENERATED_DIR/install_cli.sh"
+    source "$ACFS_GENERATED_DIR/install_lang.sh"
+    source "$ACFS_GENERATED_DIR/install_agents.sh"
+    source "$ACFS_GENERATED_DIR/install_cloud.sh"
+    source "$ACFS_GENERATED_DIR/install_stack.sh"
+    source "$ACFS_GENERATED_DIR/install_acfs.sh"
+
+    # Compute effective selection once (deps + filters).
+    acfs_resolve_selection
 
     # Phase 1: Base dependencies
     log_step "1/10" "Checking base dependencies..."
@@ -1052,6 +1187,8 @@ main() {
 ONLY_MODULES=()
 ONLY_PHASES=()
 SKIP_MODULES=()
+NO_DEPS="false"
+PRINT_PLAN="false"
 
 # Run a shell string as the target user (supports pipes/heredocs)
 run_as_target_shell() {
@@ -1103,52 +1240,24 @@ command_exists_as_target() {
     run_as_target bash -lc "command -v '$cmd' >/dev/null 2>&1"
 }
 
-# Check if a module should run based on --only/--skip flags
-should_run_module() {
-    local module_id="$1"
-    local phase="${2:-0}"
+# Effective selection computed once after manifest_index is sourced
+declare -A ACFS_EFFECTIVE_RUN=()
 
-    # Skip if in skip list
-    for skip in "${SKIP_MODULES[@]}"; do
-        [[ "$module_id" == "$skip" ]] && return 1
-    done
-
-    # If --only-modules specified, only run those
-    if [[ ${#ONLY_MODULES[@]} -gt 0 ]]; then
-        for only in "${ONLY_MODULES[@]}"; do
-            [[ "$module_id" == "$only" ]] && return 0
-        done
-        return 1
-    fi
-
-    # If --only-phase specified, only run those phases
-    if [[ ${#ONLY_PHASES[@]} -gt 0 ]]; then
-        for only_phase in "${ONLY_PHASES[@]}"; do
-            [[ "$phase" == "$only_phase" ]] && return 0
-        done
-        return 1
-    fi
-
-    return 0
+acfs_resolve_selection() {
+    # Requires scripts/generated/manifest_index.sh to be sourced.
+    # Populates ACFS_EFFECTIVE_RUN with the final module set.
+    :
 }
 
-# List all available modules (for --list-modules)
+should_run_module() {
+    local module_id="$1"
+    [[ -n "${ACFS_EFFECTIVE_RUN[$module_id]:-}" ]] && return 0
+    return 1
+}
+
 list_all_modules() {
-    echo "Available modules:"
-    echo ""
-    # This will be generated to include all module IDs
-    cat << 'EOF'
-Phase 1: base.system
-Phase 2: users.ubuntu (orchestration-only)
-Phase 3: base.filesystem
-Phase 4: shell.zsh
-Phase 5: cli.modern
-Phase 6: lang.bun, lang.uv, lang.rust, lang.go, tools.atuin, tools.zoxide
-Phase 7: agents.claude, agents.codex, agents.gemini
-Phase 8: tools.vault, db.postgres18, cloud.wrangler, cloud.supabase, cloud.vercel
-Phase 9: stack.ntm, stack.mcp_agent_mail, stack.ultimate_bug_scanner, stack.beads_viewer, stack.cass, stack.cm, stack.caam, stack.slb
-Phase 10: acfs.onboard, acfs.doctor
-EOF
+    # Prefer generated manifest index output; never hardcode.
+    acfs_manifest_list_modules
 }
 ```
 
@@ -1163,6 +1272,8 @@ EOF
 | `run_as_target` | Utility function used by generated scripts |
 | `acfs_run_verified_upstream_script_as_target` | Security wrapper |
 | `install_gum_early` | Bootstrap UI before other tools |
+| `bootstrap_sources_if_needed` | Archive download + extraction + coherence checks |
+| `acfs_resolve_selection` | Computes final module set once (filters + deps) |
 
 ### 4.4 What Moves to Generated Scripts
 
@@ -1178,6 +1289,9 @@ All module installation logic:
 - [ ] **4.1.1** Extract shared functions to `scripts/lib/` (run_as_target, etc.)
 - [ ] **4.1.2** Create `scripts/lib/install_helpers.sh` with module filtering
 - [ ] **4.1.3** Add --only, --skip, --only-phase, --list-modules to parse_args
+- [ ] **4.1.4** Add --no-deps and dependency-closure selection (powered by manifest_index)
+- [ ] **4.1.5** Keep legacy flags working by mapping them to module/tags selection
+- [ ] **4.1.6** Implement archive bootstrap with bash -n validation + coherence checks
 - [ ] **4.2.1** Add `source` statements for generated scripts in install.sh
 - [ ] **4.2.2** Replace inline module installation with calls to generated functions
 - [ ] **4.2.3** Keep orchestration logic (phases, user normalization, finalization)
@@ -1195,17 +1309,21 @@ All module installation logic:
 
 | Test | Method | Pass Criteria |
 |------|--------|---------------|
-| Generator produces valid bash | `shellcheck scripts/generated/*.sh` | No errors |
+| Generator produces valid bash | `shellcheck scripts/lib/*.sh scripts/generated/*.sh` | No errors |
 | Generated scripts source correctly | `bash -c 'source scripts/generated/install_lang.sh'` (with mocked contract) | No strict-mode leaks, no top-level side effects |
-| Contract validation works | Source without env | Error message shown |
+| Contract validation works | Invoke a module function without env | Error message shown |
 | DRY_RUN mode works | `./install.sh --dry-run` | No actual installation |
 | --only filtering works | `./install.sh --only lang.bun` | Only bun installed |
+| Dependency closure works | `./install.sh --only lang.bun` on fresh VPS | Base deps installed automatically |
+| --no-deps works | `./install.sh --only lang.bun --no-deps` | Clear failure or clear warning |
 | --skip filtering works | `./install.sh --skip stack.slb` | slb skipped |
+| Skip-dep error | `./install.sh --only lang.bun --skip base.system` | Fails early with “skipped required dependency” |
 | Full installation (Ubuntu 24.04) | Docker test | Smoke test passes |
 | Full installation (Ubuntu 25.04) | Docker test | Smoke test passes |
 | Idempotent re-run | Run installer twice | No errors, same result |
 | Doctor checks align | `acfs doctor` | All checks pass |
 | Manifest→Generated sync | CI check | Generated matches manifest |
+| Simulated curl|bash bootstrap (offline) | `./tests/vm/test_curl_bash_simulation.sh` | Bootstraps + sources correctly |
 
 ### 5.2 CI Integration
 
@@ -1246,6 +1364,11 @@ jobs:
           for script in scripts/generated/*.sh; do
             bash -n "$script"
           done
+
+      - name: Simulate curl|bash bootstrap (offline)
+        run: |
+          # Ensures the curl|bash code path stays healthy without requiring network.
+          ./tests/vm/test_curl_bash_simulation.sh
 ```
 
 ### 5.3 Tasks for Phase 5
@@ -1280,6 +1403,7 @@ jobs:
 - [ ] **6.2.2** Remove duplicate module definitions
 - [ ] **6.3.1** Add pre-commit hook to regenerate scripts on manifest change
 - [ ] **6.3.2** Add an internal maintainer guide for adding new modules (no outside contributors policy)
+- [ ] **6.3.3** Update wizard/docs commands to prefer tagged releases (still allow main for bleeding edge)
 
 **Deliverable:** Updated documentation, clean codebase
 
@@ -1304,20 +1428,22 @@ Rather than a big-bang migration, do it incrementally:
 
 ### Rollback Plan
 
-At each step, keep the old code commented out:
+At each step, keep the old code behind a feature flag (no commented code).
+
+Add one of:
+- `--legacy` (forces old inline installers)
+- `ACFS_USE_GENERATED=0/1` (global)
+- `ACFS_USE_GENERATED_CATEGORIES="lang,stack"` (optional, for incremental rollout)
 
 ```bash
 # Phase 6: Language runtimes
 log_step "6/10" "Installing language runtimes..."
 
-# NEW: Use generated scripts
-install_lang
-
-# OLD: Inline installation (remove after testing)
-# install_bun_inline
-# install_uv_inline
-# install_rust_inline
-# install_go_inline
+if [[ "${ACFS_USE_GENERATED_LANG:-1}" == "1" ]]; then
+  install_lang        # generated
+else
+  install_lang_legacy # legacy
+fi
 ```
 
 ### Category Migration Order
@@ -1347,6 +1473,8 @@ install_lang
 | Doctor alignment | doctor.sh checks match manifest verify commands |
 | Contract validation | 100% of generated scripts validate environment |
 | Filtering support | --only, --skip, --only-phase all work |
+| Dependency safety | --only expands deps by default; skipping required deps fails early |
+| curl|bash reliability | Single-archive bootstrap; no mixed-ref installs |
 
 ---
 
@@ -1361,6 +1489,9 @@ install_lang
 | Performance regression | Low | Profile before/after |
 | Function name collisions | Medium | Generator validates uniqueness |
 | Environment contract violations | Medium | Runtime validation in generated scripts |
+| Mixed-ref curl|bash installs | Medium | Archive bootstrap + coherence check |
+| Optional module kills install under set -e | Medium | Explicit error handling in generated functions |
+| Legacy flags drift from manifest | Medium | Map legacy flags to tags/modules from manifest_index |
 
 ---
 
@@ -1442,4 +1573,22 @@ bun run --filter @acfs/manifest generate
 
 # Verify
 mytool --version
+```
+
+---
+
+## Appendix C: curl|bash Bootstrap Pseudocode (Atomic + Self-Consistent)
+
+```bash
+bootstrap_sources_if_needed() {
+  # if local checkout: just set *_DIR variables and return
+  # else:
+  # 1) mktemp -d
+  # 2) download archive to tmpfile
+  # 3) extract
+  # 4) bash -n scripts/lib/*.sh scripts/generated/*.sh
+  # 5) verify manifest sha matches headers in generated scripts (optional but recommended)
+  # 6) set ACFS_*_DIR variables pointing at extracted tree
+  # 7) trap cleanup unless ACFS_KEEP_BOOTSTRAP=1
+}
 ```
