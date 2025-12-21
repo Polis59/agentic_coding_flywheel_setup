@@ -450,25 +450,83 @@ update_agents() {
         return 0
     fi
 
-    # Claude Code has its own update command
+    # Claude Code - has native update with fallback to reinstall
     if cmd_exists claude; then
-        run_cmd "Claude Code" claude update
+        capture_version_before "claude"
+
+        # Try native update first
+        if ! run_cmd_claude_update; then
+            log_to_file "Claude update failed, attempting reinstall via official installer"
+            if update_require_security; then
+                run_cmd "Claude Code (reinstall)" update_run_verified_installer claude
+            else
+                log_item "fail" "Claude Code" "update failed and reinstall unavailable (missing security.sh)"
+            fi
+        fi
+
+        if capture_version_after "claude"; then
+            log_item "ok" "Claude Code updated" "${VERSION_BEFORE[claude]} → ${VERSION_AFTER[claude]}"
+        fi
     else
         log_item "skip" "Claude Code" "not installed"
     fi
 
     # Codex CLI via bun
     if cmd_exists codex || [[ "$FORCE_MODE" == "true" ]]; then
+        capture_version_before "codex"
         run_cmd "Codex CLI" "$bun_bin" install -g @openai/codex@latest
+        if capture_version_after "codex"; then
+            log_item "ok" "Codex CLI updated" "${VERSION_BEFORE[codex]} → ${VERSION_AFTER[codex]}"
+        fi
     else
         log_item "skip" "Codex CLI" "not installed (use --force to install)"
     fi
 
     # Gemini CLI via bun
     if cmd_exists gemini || [[ "$FORCE_MODE" == "true" ]]; then
+        capture_version_before "gemini"
         run_cmd "Gemini CLI" "$bun_bin" install -g @google/gemini-cli@latest
+        if capture_version_after "gemini"; then
+            log_item "ok" "Gemini CLI updated" "${VERSION_BEFORE[gemini]} → ${VERSION_AFTER[gemini]}"
+        fi
     else
         log_item "skip" "Gemini CLI" "not installed (use --force to install)"
+    fi
+}
+
+# Helper for Claude update with proper error handling
+run_cmd_claude_update() {
+    local desc="Claude Code (native update)"
+    local cmd_display="claude update"
+
+    log_to_file "Running: $cmd_display"
+
+    if [[ "$DRY_RUN" == "true" ]]; then
+        log_item "skip" "$desc" "dry-run: $cmd_display"
+        return 0
+    fi
+
+    log_item "run" "$desc"
+
+    local output=""
+    local exit_code=0
+    output=$(claude update 2>&1) || exit_code=$?
+
+    if [[ $exit_code -eq 0 ]]; then
+        if [[ "$QUIET" != "true" ]]; then
+            echo -e "\033[1A\033[2K  ${GREEN}[ok]${NC} $desc"
+        fi
+        log_to_file "Success: $desc"
+        [[ -n "$output" ]] && log_to_file "Output: $output"
+        ((SUCCESS_COUNT += 1))
+        return 0
+    else
+        if [[ "$QUIET" != "true" ]]; then
+            echo -e "\033[1A\033[2K  ${YELLOW}[retry]${NC} $desc"
+        fi
+        log_to_file "Failed: $desc (exit code: $exit_code), will try reinstall"
+        [[ -n "$output" ]] && log_to_file "Output: $output"
+        return 1
     fi
 }
 
