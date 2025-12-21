@@ -48,6 +48,26 @@ run_as_user() {
     fi
 }
 
+# Check if a command exists in target user's PATH
+# More robust than checking binary paths directly - respects user's PATH
+user_command_exists() {
+    local cmd="$1"
+    run_as_user "command -v '$cmd'" &>/dev/null
+}
+
+# Check if a file exists (from current user perspective)
+# Used for checking config files in target user's home
+user_file_exists() {
+    local path="$1"
+    [[ -f "$path" ]]
+}
+
+# Check if a directory exists and is non-empty
+user_dir_has_content() {
+    local path="$1"
+    [[ -d "$path" && -n "$(ls -A "$path" 2>/dev/null)" ]]
+}
+
 # ============================================================
 # Status Check Functions
 # ============================================================
@@ -61,9 +81,9 @@ check_claude_status() {
     fi
 
     # Check for config indicating login
-    if [[ -f "$TARGET_HOME/.claude/config.json" ]] || \
-       [[ -f "$TARGET_HOME/.config/claude/config.json" ]] || \
-       [[ -d "$TARGET_HOME/.claude" && -n "$(ls -A "$TARGET_HOME/.claude" 2>/dev/null)" ]]; then
+    if user_file_exists "$TARGET_HOME/.claude/config.json" || \
+       user_file_exists "$TARGET_HOME/.config/claude/config.json" || \
+       user_dir_has_content "$TARGET_HOME/.claude"; then
         SERVICE_STATUS[claude]="configured"
     else
         SERVICE_STATUS[claude]="installed"
@@ -80,8 +100,8 @@ check_codex_status() {
 
     # Check for API key or config
     if [[ -n "${OPENAI_API_KEY:-}" ]] || \
-       [[ -f "$TARGET_HOME/.codex/config.json" ]] || \
-       [[ -f "$TARGET_HOME/.config/codex/config.json" ]]; then
+       user_file_exists "$TARGET_HOME/.codex/config.json" || \
+       user_file_exists "$TARGET_HOME/.config/codex/config.json"; then
         SERVICE_STATUS[codex]="configured"
     else
         SERVICE_STATUS[codex]="installed"
@@ -97,7 +117,7 @@ check_gemini_status() {
     fi
 
     # Check for credentials
-    if [[ -f "$TARGET_HOME/.config/gemini/credentials.json" ]] || \
+    if user_file_exists "$TARGET_HOME/.config/gemini/credentials.json" || \
        [[ -n "${GOOGLE_API_KEY:-}" ]] || \
        [[ -n "${GEMINI_API_KEY:-}" ]]; then
         SERVICE_STATUS[gemini]="configured"
@@ -115,7 +135,7 @@ check_vercel_status() {
     fi
 
     # Check if logged in by looking for auth token
-    if [[ -f "$TARGET_HOME/.config/vercel/auth.json" ]] || \
+    if user_file_exists "$TARGET_HOME/.config/vercel/auth.json" || \
        [[ -n "${VERCEL_TOKEN:-}" ]]; then
         SERVICE_STATUS[vercel]="configured"
     else
@@ -132,7 +152,7 @@ check_supabase_status() {
     fi
 
     # Check for access token
-    if [[ -f "$TARGET_HOME/.config/supabase/access-token" ]] || \
+    if user_file_exists "$TARGET_HOME/.config/supabase/access-token" || \
        [[ -n "${SUPABASE_ACCESS_TOKEN:-}" ]]; then
         SERVICE_STATUS[supabase]="configured"
     else
@@ -149,8 +169,8 @@ check_wrangler_status() {
     fi
 
     # Check for Cloudflare credentials
-    if [[ -f "$TARGET_HOME/.config/wrangler/config/default.toml" ]] || \
-       [[ -f "$TARGET_HOME/.wrangler/config/default.toml" ]] || \
+    if user_file_exists "$TARGET_HOME/.config/wrangler/config/default.toml" || \
+       user_file_exists "$TARGET_HOME/.wrangler/config/default.toml" || \
        [[ -n "${CLOUDFLARE_API_TOKEN:-}" ]]; then
         SERVICE_STATUS[wrangler]="configured"
     else
@@ -159,13 +179,14 @@ check_wrangler_status() {
 }
 
 check_postgres_status() {
-    if ! command -v psql &>/dev/null; then
+    # Check if psql is available to the target user
+    if ! user_command_exists psql; then
         SERVICE_STATUS[postgres]="not_installed"
         return
     fi
 
     # Check if service is running and user can connect
-    if run_as_user "psql -c 'SELECT 1' &>/dev/null"; then
+    if run_as_user "psql -c 'SELECT 1'" &>/dev/null; then
         SERVICE_STATUS[postgres]="configured"
     elif systemctl is-active --quiet postgresql 2>/dev/null; then
         SERVICE_STATUS[postgres]="running"
