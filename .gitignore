@@ -87,6 +87,7 @@ apps/web/mobile-screenshots/
 apps/web/test-mobile.ts
 apps/web/playwright-report/
 apps/web/test-results/
+research_screenshots/
 
 # ----- Installer test outputs -----
 *.log
