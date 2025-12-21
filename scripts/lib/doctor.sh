@@ -91,6 +91,10 @@ ACFS_TEAL="${ACFS_TEAL:-#94e2d5}"
 PASS_COUNT=0
 WARN_COUNT=0
 FAIL_COUNT=0
+SKIP_COUNT=0
+
+# Skipped tools data (bead qup)
+declare -a SKIPPED_TOOLS_DATA=()
 
 # Output modes
 JSON_MODE=false
@@ -620,6 +624,97 @@ check_stack() {
 }
 
 # ============================================================
+# Skipped Tools Display (bead qup)
+# ============================================================
+# Shows tools the user intentionally skipped during installation.
+# These are not failures - they are deliberate choices.
+
+# Load skipped tools from state.json
+# Populates SKIPPED_TOOLS_DATA array with "tool:reason" entries
+load_skipped_tools() {
+    SKIPPED_TOOLS_DATA=()
+    local state_file="$HOME/.acfs/state.json"
+
+    [[ -f "$state_file" ]] || return 0
+
+    # Use jq if available for reliable parsing
+    if command -v jq &>/dev/null; then
+        local skipped_json
+        skipped_json=$(jq -r '.skipped_tools // empty' "$state_file" 2>/dev/null) || return 0
+
+        # Handle both array format ["tool1","tool2"] and object format {"tool1":"reason"}
+        if [[ "$skipped_json" == "["* ]]; then
+            # Array format - no reasons stored
+            while IFS= read -r tool; do
+                [[ -n "$tool" && "$tool" != "null" ]] && SKIPPED_TOOLS_DATA+=("$tool:user choice")
+            done < <(jq -r '.skipped_tools[]? // empty' "$state_file" 2>/dev/null)
+        elif [[ "$skipped_json" == "{"* ]]; then
+            # Object format with reasons
+            while IFS= read -r line; do
+                [[ -n "$line" ]] && SKIPPED_TOOLS_DATA+=("$line")
+            done < <(jq -r '.skipped_tools | to_entries[]? | "\(.key):\(.value)"' "$state_file" 2>/dev/null)
+        fi
+    else
+        # Fallback: basic grep for array format
+        local skipped
+        skipped=$(grep -oP '"skipped_tools"\s*:\s*\[\K[^\]]+' "$state_file" 2>/dev/null | tr -d '", ')
+        for tool in $skipped; do
+            [[ -n "$tool" ]] && SKIPPED_TOOLS_DATA+=("$tool:user choice")
+        done
+    fi
+}
+
+# Display a skipped tool with [○] indicator
+# Usage: check_skipped <id> <label> [reason]
+check_skipped() {
+    local id="$1"
+    local label="$2"
+    local reason="${3:-user choice}"
+
+    ((SKIP_COUNT += 1))
+
+    if [[ "$JSON_MODE" == "true" ]]; then
+        JSON_CHECKS+=("{\"id\":\"$(json_escape "$id")\",\"label\":\"$(json_escape "$label")\",\"status\":\"skipped\",\"details\":\"$(json_escape "$reason")\",\"fix\":null}")
+        return 0
+    fi
+
+    if [[ "$HAS_GUM" == "true" ]]; then
+        echo "  $(gum style --foreground "$ACFS_MUTED" --bold "○ SKIP") $(gum style --foreground "$ACFS_MUTED" "$label")"
+        echo "        $(gum style --foreground "$ACFS_MUTED" --italic "Reason: $reason")"
+    else
+        echo -e "  ${CYAN}○ SKIP${NC} $label"
+        echo -e "        Reason: $reason"
+    fi
+}
+
+# Show intentionally skipped tools section
+show_skipped_tools() {
+    load_skipped_tools
+
+    # Skip section if nothing was skipped
+    [[ ${#SKIPPED_TOOLS_DATA[@]} -eq 0 ]] && return 0
+
+    section "Intentionally Skipped"
+
+    if [[ "$JSON_MODE" != "true" ]]; then
+        if [[ "$HAS_GUM" == "true" ]]; then
+            gum style --foreground "$ACFS_MUTED" "  These tools were skipped during installation (not errors)"
+        else
+            echo -e "  ${CYAN}These tools were skipped during installation (not errors)${NC}"
+        fi
+        echo ""
+    fi
+
+    for entry in "${SKIPPED_TOOLS_DATA[@]}"; do
+        local tool="${entry%%:*}"
+        local reason="${entry#*:}"
+        check_skipped "skipped.$tool" "$tool" "$reason"
+    done
+
+    blank_line
+}
+
+# ============================================================
 # Deep Checks - Functional Tests (bead 01s)
 # ============================================================
 # These tests go beyond "is the binary installed" to verify
@@ -1090,10 +1185,20 @@ check_vercel_auth() {
 print_summary() {
     echo ""
 
+    # Print legend (bead qup)
+    if [[ "$HAS_GUM" == "true" ]]; then
+        echo ""
+        gum style --foreground "$ACFS_MUTED" "  Legend: $(gum style --foreground "$ACFS_SUCCESS" "✓") installed  $(gum style --foreground "$ACFS_MUTED" "○") skipped  $(gum style --foreground "$ACFS_ERROR" "✖") missing  $(gum style --foreground "$ACFS_WARNING" "⚠") warning  $(gum style --foreground "$ACFS_WARNING" "?") timeout"
+    else
+        echo ""
+        echo -e "  Legend: ${GREEN}✓${NC} installed  ${CYAN}○${NC} skipped  ${RED}✖${NC} missing  ${YELLOW}⚠${NC} warning  ${YELLOW}?${NC} timeout"
+    fi
+
     if [[ "$HAS_GUM" == "true" ]]; then
         # Beautiful gum-styled summary
         local status_line=""
         status_line="$(gum style --foreground "$ACFS_SUCCESS" --bold "$PASS_COUNT passed") "
+        [[ $SKIP_COUNT -gt 0 ]] && status_line+="$(gum style --foreground "$ACFS_MUTED" "$SKIP_COUNT skipped") "
         status_line+="$(gum style --foreground "$ACFS_WARNING" "$WARN_COUNT warnings") "
         status_line+="$(gum style --foreground "$ACFS_ERROR" "$FAIL_COUNT failed")"
 
@@ -1124,7 +1229,10 @@ $(gum style --foreground "$ACFS_MUTED" "Run the suggested fix commands, then 'ac
         fi
     else
         echo "============================================================"
-        echo -e "Checks: ${GREEN}$PASS_COUNT passed${NC}, ${YELLOW}$WARN_COUNT warnings${NC}, ${RED}$FAIL_COUNT failed${NC}"
+        local summary_line="Checks: ${GREEN}$PASS_COUNT passed${NC}"
+        [[ $SKIP_COUNT -gt 0 ]] && summary_line+=", ${CYAN}$SKIP_COUNT skipped${NC}"
+        summary_line+=", ${YELLOW}$WARN_COUNT warnings${NC}, ${RED}$FAIL_COUNT failed${NC}"
+        echo -e "$summary_line"
         echo ""
 
         if [[ $FAIL_COUNT -eq 0 ]]; then
@@ -1171,7 +1279,7 @@ print_json() {
   "user": "$(json_escape "$(whoami)")",
   "os": {"id": "$(json_escape "$os_id")", "version": "$(json_escape "$os_version")"},
   "checks": [$checks_json],
-  "summary": {"pass": $PASS_COUNT, "warn": $WARN_COUNT, "fail": $FAIL_COUNT}$deep_summary_json
+  "summary": {"pass": $PASS_COUNT, "skip": $SKIP_COUNT, "warn": $WARN_COUNT, "fail": $FAIL_COUNT}$deep_summary_json
 }
 EOF
 }
@@ -1333,6 +1441,7 @@ $(gum style --foreground "$ACFS_MUTED" "OS:") $(gum style --foreground "$ACFS_TE
     check_agents
     check_cloud
     check_stack
+    show_skipped_tools
 
     # Run deep checks if --deep flag was provided
     if [[ "$DEEP_MODE" == "true" ]]; then
