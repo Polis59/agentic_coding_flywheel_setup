@@ -112,10 +112,10 @@ export function GuideSection({
   return (
     <div className={cn("space-y-3", className)}>
       <div className="flex items-center gap-2">
-        <Icon className="h-5 w-5 text-[oklch(0.78_0.16_75)]" />
+        <Icon className="h-5 w-5 shrink-0 text-[oklch(0.78_0.16_75)]" />
         <h3 className="font-semibold text-foreground">{title}</h3>
       </div>
-      <div className="text-sm leading-relaxed text-muted-foreground">{children}</div>
+      <div className="overflow-x-auto text-sm leading-relaxed text-muted-foreground">{children}</div>
     </div>
   );
 }
@@ -139,7 +139,7 @@ export function GuideStep({
       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[oklch(0.7_0.15_280)] text-sm font-bold text-white">
         {number}
       </div>
-      <div className="flex-1 space-y-2 pt-1">
+      <div className="min-w-0 flex-1 space-y-2 pt-1">
         <p className="font-medium text-foreground">{title}</p>
         <div className="text-sm leading-relaxed text-muted-foreground">{children}</div>
       </div>
@@ -180,14 +180,14 @@ export function GuideExplain({
   return (
     <div
       className={cn(
-        "rounded-xl border border-[oklch(0.75_0.18_195/0.3)] bg-[oklch(0.75_0.18_195/0.08)] p-4",
+        "overflow-hidden rounded-xl border border-[oklch(0.75_0.18_195/0.3)] bg-[oklch(0.75_0.18_195/0.08)] p-4",
         className
       )}
     >
       <p className="mb-2 font-medium text-[oklch(0.85_0.12_195)]">
         What is &quot;{term}&quot;?
       </p>
-      <p className="text-sm leading-relaxed text-muted-foreground">{children}</p>
+      <div className="overflow-x-auto text-sm leading-relaxed text-muted-foreground">{children}</div>
     </div>
   );
 }
@@ -270,14 +270,14 @@ export function GuideCaution({
   return (
     <div
       className={cn(
-        "rounded-xl border border-[oklch(0.78_0.16_75/0.3)] bg-[oklch(0.78_0.16_75/0.08)] p-4",
+        "overflow-hidden rounded-xl border border-[oklch(0.78_0.16_75/0.3)] bg-[oklch(0.78_0.16_75/0.08)] p-4",
         className
       )}
     >
       <p className="mb-2 flex items-center gap-2 font-medium text-[oklch(0.88_0.12_75)]">
         <span className="text-lg">⚠️</span> Important
       </p>
-      <p className="text-sm leading-relaxed text-muted-foreground">{children}</p>
+      <div className="overflow-x-auto text-sm leading-relaxed text-muted-foreground">{children}</div>
     </div>
   );
 }
@@ -295,14 +295,14 @@ export function GuideTip({
   return (
     <div
       className={cn(
-        "rounded-xl border border-[oklch(0.72_0.19_145/0.3)] bg-[oklch(0.72_0.19_145/0.08)] p-4",
+        "overflow-hidden rounded-xl border border-[oklch(0.72_0.19_145/0.3)] bg-[oklch(0.72_0.19_145/0.08)] p-4",
         className
       )}
     >
       <p className="mb-2 flex items-center gap-2 font-medium text-[oklch(0.82_0.12_145)]">
         <span className="text-lg">💡</span> Tip
       </p>
-      <p className="text-sm leading-relaxed text-muted-foreground">{children}</p>
+      <div className="overflow-x-auto text-sm leading-relaxed text-muted-foreground">{children}</div>
     </div>
   );
 }

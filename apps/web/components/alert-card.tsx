@@ -94,7 +94,7 @@ export function AlertCard({
         <IconComponent
           className={cn("mt-0.5 h-5 w-5 shrink-0", styles.icon)}
         />
-        <div className="space-y-1">
+        <div className="min-w-0 flex-1 space-y-1">
           {title && (
             <p className={cn("font-medium", styles.title)}>{title}</p>
           )}

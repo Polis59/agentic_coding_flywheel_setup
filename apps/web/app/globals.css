@@ -231,14 +231,46 @@
   * {
     @apply border-border outline-ring/50;
   }
+
+  /* CRITICAL: Prevent horizontal overflow at the root level */
+  html {
+    overflow-x: hidden;
+  }
+
   body {
     @apply bg-background text-foreground antialiased;
+    overflow-x: hidden;
+    /* Ensure body doesn't exceed viewport width */
+    max-width: 100vw;
   }
 
   /* Prevent inline code from causing horizontal overflow on mobile */
   code:not(pre code) {
     overflow-wrap: break-word;
     word-break: break-word;
+  }
+
+  /* Block-level code elements need containment */
+  code.block,
+  code[class*="block"],
+  pre {
+    max-width: 100%;
+    overflow-x: auto;
+  }
+
+  /* Ensure all containers respect viewport width on mobile */
+  @media (max-width: 768px) {
+    /* Force code blocks to respect container width */
+    pre,
+    code {
+      max-width: 100%;
+    }
+
+    /* Allow flex children to shrink below content size */
+    .flex > *,
+    .flex-1 {
+      min-width: 0;
+    }
   }
 
   /* Custom scrollbar for dark theme */
