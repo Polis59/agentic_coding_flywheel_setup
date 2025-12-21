@@ -5,10 +5,9 @@ import { useRouter } from "next/navigation";
 import { ExternalLink, Check, Server, ChevronDown, Cloud, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AlertCard } from "@/components/alert-card";
-import { cn } from "@/lib/utils";
+import { cn, withCurrentSearch } from "@/lib/utils";
 import { markStepComplete } from "@/lib/wizardSteps";
 import { useWizardAnalytics } from "@/lib/hooks/useWizardAnalytics";
-import { withCurrentSearch } from "@/lib/utils";
 import {
   SimplerGuide,
   GuideSection,
@@ -36,11 +35,10 @@ const PROVIDERS: ProviderInfo[] = [
     url: "https://contabo.com/en-us/vps/",
     pros: [
       "Best specs-to-price ratio on the market",
-      "Cloud VPS 50 (64GB RAM, 16 vCPU): ~$37/month - BEST VALUE",
-      "Cloud VPS 40 (48GB RAM, 12 vCPU): ~$21/month - budget option",
+      "Look for 48–64GB RAM and 12–16 vCPU options (plan names/prices change)",
       "EU and US data centers with monthly billing",
     ],
-    recommended: "Cloud VPS 50 (64GB RAM, 16 vCPU, ~$37/month) - our top pick for serious multi-agent work",
+    recommended: "Aim for 64GB RAM if budget allows; 48GB is a solid starting point for most people.",
   },
   {
     id: "ovh",
@@ -49,11 +47,10 @@ const PROVIDERS: ProviderInfo[] = [
     url: "https://us.ovhcloud.com/vps/",
     pros: [
       "Great EU and US data centers with anti-DDoS included",
-      "VPS-5 (64GB RAM, 16 vCore): ~$34/month*",
-      "VPS-4 (48GB RAM, 12 vCore): ~$22/month* - budget option",
-      "*Prices shown are 'Starting at' rates - may vary with billing period",
+      "Simple control panel and good documentation",
+      "Look for 48–64GB RAM tiers (plan names/prices change)",
     ],
-    recommended: "VPS-5 (64GB RAM, 16 vCore, ~$34/month) for best multi-agent performance",
+    recommended: "Pick the closest region and target 48GB+ RAM for smooth multi-agent workflows.",
   },
 ];
 
@@ -144,7 +141,7 @@ const SPEC_CHECKLIST = [
   { label: "CPU", value: "12+ vCPU" },
   { label: "RAM", value: "48GB+ (32GB absolute minimum)" },
   { label: "Storage", value: "250GB+ NVMe SSD" },
-  { label: "Price", value: "~$21-37/month" },
+  { label: "Price", value: "Varies (often ~$20–40/month for 48–64GB plans)" },
 ];
 
 export default function RentVPSPage() {
@@ -180,7 +177,7 @@ export default function RentVPSPage() {
           </div>
           <div>
             <h1 className="bg-gradient-to-r from-foreground via-foreground to-muted-foreground bg-clip-text text-2xl font-bold tracking-tight text-transparent sm:text-3xl">
-              Rent a <Jargon term="vps">VPS</Jargon> (~$21-37/month)
+              Rent a <Jargon term="vps">VPS</Jargon> (~$20-40/month)
             </h1>
             <p className="text-sm text-muted-foreground">
               ~5 min
@@ -328,7 +325,7 @@ export default function RentVPSPage() {
               <div className="rounded-lg border border-primary/20 bg-primary/5 p-3">
                 <p className="font-medium text-foreground">Total for full setup:</p>
                 <p className="text-sm text-muted-foreground">
-                  VPS (~$37) + Claude Max x2 ($400) + GPT Pro ($200) = <strong>~$637/month</strong>
+                  VPS (~$20–40) + Claude Max x2 ($400) + GPT Pro ($200) = <strong>~$620–640/month</strong>
                   <br /><br />
                   <em>This sounds like a lot, but if it helps you build and ship faster,
                   it pays for itself quickly!</em>
