@@ -653,7 +653,7 @@ export const flywheelDescription = {
     toolCount: 8,
     languages: ["Go", "Rust", "TypeScript", "Python"],
     avgInstallTime: "< 30s each",
-    projectsSimultaneous: "7+",
+    projectsSimultaneous: "8+",
     agentsParallel: "6+",
   },
   keyInsight:

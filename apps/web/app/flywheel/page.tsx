@@ -139,7 +139,7 @@ function HeroSection() {
               <Layers className="h-5 w-5 text-emerald-400 sm:h-6 sm:w-6" />
             </div>
             <div>
-              <p className="text-xl font-bold text-foreground sm:text-2xl">7+</p>
+              <p className="text-xl font-bold text-foreground sm:text-2xl">8+</p>
               <p className="text-[12px] text-muted-foreground sm:text-sm">Projects simultaneously</p>
             </div>
           </div>
