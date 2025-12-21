@@ -540,9 +540,15 @@ ACFS installs a comprehensive suite of **30+ tools** organized into categories:
 | **ast-grep** | `sg` | Structural code search |
 | **lazygit** | `lg` (aliased) | Git TUI |
 | **GitHub CLI** | `gh` | GitHub auth, issues, PRs |
+| **Git LFS** | `git-lfs` | Large file support for Git |
 | **bat** | `cat` (aliased) | Cat with syntax highlighting |
 | **neovim** | `nvim` | Modern vim |
 | **jq** | `jq` | JSON processor |
+| **rsync** | `rsync` | Fast file sync/copy |
+| **lsof** | `lsof` | Debug open files/ports |
+| **dnsutils** | `dig` | DNS debugging |
+| **netcat** | `nc` | Network debugging |
+| **strace** | `strace` | Syscall tracing |
 
 ### AI Coding Agents
 
