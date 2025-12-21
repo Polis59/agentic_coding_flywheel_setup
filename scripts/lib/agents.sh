@@ -345,7 +345,8 @@ check_agent_auth() {
     fi
 
     # Codex: Check for OAuth auth.json (uses ChatGPT accounts, not API keys)
-    if [[ -f "$target_home/.codex/auth.json" ]]; then
+    local codex_home="${CODEX_HOME:-$target_home/.codex}"
+    if [[ -f "$codex_home/auth.json" ]]; then
         log_detail "  Codex: configured"
     else
         log_warn "  Codex: not configured (run 'codex login' to authenticate)"
