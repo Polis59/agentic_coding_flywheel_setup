@@ -41,13 +41,13 @@ export default function StatusCheckPage() {
   // Analytics tracking for this wizard step
   const { markComplete } = useWizardAnalytics({
     step: "status_check",
-    stepNumber: 10,
+    stepNumber: 11,
     stepTitle: "Status Check",
   });
 
   const handleContinue = useCallback(() => {
     markComplete();
-    markStepComplete(10);
+    markStepComplete(11);
     setIsNavigating(true);
     router.push(withCurrentSearch("/wizard/launch-onboarding"));
   }, [router, markComplete]);

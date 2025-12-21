@@ -64,7 +64,7 @@ export default function PreflightCheckPage() {
   // Analytics tracking for this wizard step
   const { markComplete } = useWizardAnalytics({
     step: "preflight_check",
-    stepNumber: 7,
+    stepNumber: 8,
     stepTitle: "Pre-Flight Check",
   });
 
@@ -72,7 +72,7 @@ export default function PreflightCheckPage() {
 
   const goNext = useCallback(() => {
     markComplete();
-    markStepComplete(7);
+    markStepComplete(8);
     setIsNavigating(true);
     router.push(withCurrentSearch("/wizard/run-installer"));
   }, [router, markComplete]);

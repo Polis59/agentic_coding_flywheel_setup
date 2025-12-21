@@ -63,13 +63,13 @@ export default function RunInstallerPage() {
   // Analytics tracking for this wizard step
   const { markComplete } = useWizardAnalytics({
     step: "run_installer",
-    stepNumber: 8,
+    stepNumber: 9,
     stepTitle: "Run Installer",
   });
 
   const handleContinue = useCallback(() => {
     markComplete();
-    markStepComplete(8);
+    markStepComplete(9);
     setIsNavigating(true);
     router.push(withCurrentSearch("/wizard/reconnect-ubuntu"));
   }, [router, markComplete]);
