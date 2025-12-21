@@ -32,7 +32,7 @@ export const metadata: Metadata = {
     "developer tools",
     "agentic coding",
   ],
-  authors: [{ name: "Dicklesworthstone" }],
+  authors: [{ name: "Jeffrey Emanuel", url: "https://x.com/doodlestein" }],
   openGraph: {
     title: "ACFS - Agentic Coding Flywheel Setup",
     description:

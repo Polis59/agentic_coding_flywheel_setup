@@ -679,7 +679,7 @@ export default function WorkflowPage() {
           <p className="text-muted-foreground mb-6">
             This phase starts with a human-generated idea and quickly escalates to agent-assisted refinement.
             The goal is to produce a comprehensive, self-contained plan document before any code is written.
-            As Emanuel says: &quot;It&apos;s a lot easier and faster to operate in &apos;plan space&apos; before we start implementing.&quot;
+            As Jeffrey Emanuel says: &quot;It&apos;s a lot easier and faster to operate in &apos;plan space&apos; before we start implementing.&quot;
           </p>
 
           <div className="space-y-2">

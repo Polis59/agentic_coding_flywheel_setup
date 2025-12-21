@@ -596,7 +596,16 @@ export default function HomePage() {
               </div>
 
               <p className="text-xs text-muted-foreground">
-                Built for the agentic coding community
+                Created by{" "}
+                <a
+                  href="https://x.com/doodlestein"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline"
+                >
+                  Jeffrey Emanuel
+                </a>
+                {" "}for the agentic coding community
               </p>
             </div>
           </div>

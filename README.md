@@ -1540,5 +1540,5 @@ MIT License. See [LICENSE](LICENSE) for details.
 ---
 
 <div align="center">
-  <sub>Built with care for the agentic coding community.</sub>
+  <sub>Created by <a href="https://x.com/doodlestein">Jeffrey Emanuel</a> (<a href="https://github.com/Dicklesworthstone">@Dicklesworthstone</a>) for the agentic coding community.</sub>
 </div>
