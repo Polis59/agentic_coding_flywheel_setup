@@ -291,11 +291,12 @@ test.describe("Navigation", () => {
     await page.goto("/wizard/os-selection");
     await page.waitForLoadState("networkidle");
 
-    // Mobile stepper should show step indicator with correct format
-    await expect(page.getByText(/Step\s+\d+\s+of\s+\d+/i)).toBeVisible({ timeout: 5000 });
+    // Mobile header should show step indicator (text spans elements, so check each part)
+    await expect(page.locator('text="Step"').first()).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('text="of 10"').first()).toBeVisible();
 
-    // Mobile navigation buttons should be visible at bottom
-    await expect(page.locator('nav button').first()).toBeVisible();
+    // Mobile navigation buttons should be visible at bottom (Back and Next)
+    await expect(page.getByRole('button', { name: /back/i })).toBeVisible();
   });
 
   test("should navigate using back button", async ({ page }) => {
@@ -303,14 +304,14 @@ test.describe("Navigation", () => {
     await page.getByRole('radio', { name: /Mac/i }).click();
     await page.getByRole('button', { name: /continue/i }).click();
 
-    // Now on step 2
-    await expect(page).toHaveURL("/wizard/install-terminal");
+    // Now on step 2 (URL may include query params)
+    await expect(page).toHaveURL(/\/wizard\/install-terminal/);
 
-    // Go back
+    // Go back using browser back button
     await page.goBack();
 
-    // Should be back on step 1
-    await expect(page).toHaveURL("/wizard/os-selection");
+    // Should be back on step 1 (URL may include query params like ?os=mac)
+    await expect(page).toHaveURL(/\/wizard\/os-selection/);
   });
 });
 
