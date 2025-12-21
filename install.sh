@@ -1306,6 +1306,137 @@ ensure_ubuntu() {
     log_detail "OS: Ubuntu $VERSION_ID"
 }
 
+# ============================================================
+# Ubuntu Auto-Upgrade Phase (nb4)
+# Runs as "Phase -1" before all other installation phases.
+# Handles multi-reboot upgrade sequences (e.g., 24.04 → 24.10 → 25.04 → 25.10)
+# ============================================================
+run_ubuntu_upgrade_phase() {
+    # Skip if user requested
+    if [[ "$SKIP_UBUNTU_UPGRADE" == "true" ]]; then
+        log_detail "Skipping Ubuntu upgrade (--skip-ubuntu-upgrade)"
+        return 0
+    fi
+
+    # Only upgrade actual Ubuntu systems
+    if [[ ! -f /etc/os-release ]]; then
+        log_detail "Not an Ubuntu system, skipping upgrade"
+        return 0
+    fi
+    # shellcheck disable=SC1091
+    source /etc/os-release
+    if [[ "$ID" != "ubuntu" ]]; then
+        log_detail "Not Ubuntu (detected: $ID), skipping upgrade"
+        return 0
+    fi
+
+    # Source upgrade library
+    if ! _source_ubuntu_upgrade_lib; then
+        log_warn "Could not load ubuntu_upgrade.sh library"
+        log_warn "Skipping Ubuntu auto-upgrade"
+        return 0
+    fi
+
+    # Get current version
+    local current_version
+    current_version=$(ubuntu_get_version_string)
+    log_detail "Current Ubuntu version: $current_version"
+
+    # Check if upgrade is needed
+    if ubuntu_version_gte "$current_version" "$TARGET_UBUNTU_VERSION"; then
+        log_detail "Ubuntu $current_version meets target ($TARGET_UBUNTU_VERSION)"
+        return 0
+    fi
+
+    # Check if we're resuming an upgrade after reboot
+    local upgrade_stage
+    upgrade_stage=$(state_upgrade_get_stage 2>/dev/null || echo "not_started")
+
+    if [[ "$upgrade_stage" == "awaiting_reboot" ]]; then
+        # This shouldn't happen - the resume service handles this
+        # But if user manually runs install.sh, we can continue
+        log_info "Detected upgrade in progress (awaiting reboot)"
+        log_info "The systemd resume service should handle this automatically"
+        log_info "If the system just rebooted, please wait for automatic resume"
+        return 0
+    fi
+
+    # Calculate upgrade path
+    local upgrade_path
+    upgrade_path=$(ubuntu_get_upgrade_path "$current_version" "$TARGET_UBUNTU_VERSION")
+
+    if [[ -z "$upgrade_path" ]]; then
+        log_detail "No upgrade path found from $current_version to $TARGET_UBUNTU_VERSION"
+        return 0
+    fi
+
+    log_step "-1/10" "Ubuntu Auto-Upgrade"
+    log_info "Upgrade path: $current_version → $upgrade_path → $TARGET_UBUNTU_VERSION"
+
+    # Show warning and get confirmation (unless --yes mode)
+    if type -t ubuntu_show_upgrade_warning &>/dev/null; then
+        ubuntu_show_upgrade_warning
+    fi
+
+    if [[ "$YES_MODE" != "true" ]]; then
+        log_warn "Ubuntu upgrade will take 30-60 minutes per version and require reboots."
+        log_warn "Your SSH session will disconnect. Reconnect after each reboot."
+        echo ""
+        read -r -p "Proceed with Ubuntu upgrade? [y/N] " response
+        if [[ ! "$response" =~ ^[Yy] ]]; then
+            log_info "Ubuntu upgrade skipped by user"
+            log_info "Continuing with ACFS installation on Ubuntu $current_version"
+            return 0
+        fi
+    fi
+
+    # Run preflight checks
+    if type -t ubuntu_preflight_checks &>/dev/null; then
+        if ! ubuntu_preflight_checks; then
+            log_error "Preflight checks failed. Cannot proceed with upgrade."
+            log_info "Use --skip-ubuntu-upgrade to bypass (not recommended)"
+            return 1
+        fi
+    fi
+
+    # Start the upgrade sequence
+    # This will trigger reboots and the resume service will continue
+    log_info "Starting Ubuntu upgrade sequence..."
+
+    if type -t ubuntu_start_upgrade_sequence &>/dev/null; then
+        # Pass the script directory for resume infrastructure setup
+        local acfs_source_dir="${SCRIPT_DIR:-}"
+        if [[ -z "$acfs_source_dir" ]]; then
+            # curl|bash scenario - we need to tell the resume script where to get libs
+            acfs_source_dir="DOWNLOAD"
+        fi
+
+        # Save original arguments for resume after final reboot
+        local original_args="$*"
+        if [[ "$YES_MODE" == "true" ]]; then
+            original_args="--yes $original_args"
+        fi
+        if [[ "$MODE" == "vibe" ]]; then
+            original_args="--mode vibe $original_args"
+        fi
+
+        if ! ubuntu_start_upgrade_sequence "$acfs_source_dir" "$original_args"; then
+            log_error "Ubuntu upgrade failed to start"
+            return 1
+        fi
+
+        # If we get here, the script is about to exit for reboot
+        # The resume service will take over after reboot
+        log_info "Upgrade initiated. System will reboot shortly."
+        log_info "Reconnect via SSH after reboot - upgrade will continue automatically."
+        exit 0
+    else
+        log_warn "ubuntu_start_upgrade_sequence not available"
+        log_warn "Continuing with ACFS installation on current Ubuntu version"
+        return 0
+    fi
+}
+
 ensure_base_deps() {
     set_phase "base_deps" "Base Dependencies" 1
     log_step "1/10" "Checking base dependencies..."
@@ -2446,6 +2577,14 @@ main() {
     validate_target_user
     init_target_paths
     ensure_ubuntu
+
+    # ============================================================
+    # Ubuntu Auto-Upgrade Phase (nb4)
+    # ============================================================
+    # Run as "Phase -1" before all other phases.
+    # This may trigger a reboot and exit. After final reboot,
+    # the resume service will call install.sh again to continue.
+    run_ubuntu_upgrade_phase "$@"
 
     # ============================================================
     # State Management and Resume Logic (mjt.5.8)
