@@ -35,11 +35,11 @@ const PROVIDERS: ProviderInfo[] = [
     url: "https://contabo.com/en/vps/",
     pros: [
       "Best specs-to-price ratio on the market",
-      "Cloud VPS 30 (8 vCPU, 24GB) for ~€11/month or Cloud VPS 40 (12 vCPU, 48GB) for ~€20/month",
+      "Cloud VPS 30 (8 vCPU, 24GB): €14/month or Cloud VPS 40 (12 vCPU, 48GB): €25/month",
       "EU and US data centers",
       "Instant activation",
     ],
-    recommended: "Cloud VPS 40 (12 vCPU, 48GB RAM, ~€20/month) for best multi-agent performance",
+    recommended: "Cloud VPS 40 (12 vCPU, 48GB RAM, €25/month) for best multi-agent performance",
   },
   {
     id: "ovh",
@@ -48,11 +48,11 @@ const PROVIDERS: ProviderInfo[] = [
     url: "https://www.ovhcloud.com/en/vps/",
     pros: [
       "Great EU data centers",
+      "VPS-3 (8 vCPU, 24GB): ~$13/month or VPS-4 (12 vCPU, 48GB): ~$22/month",
       "Good customer support",
-      "Solid network performance",
-      "Instant activation",
+      "Instant activation with anti-DDoS included",
     ],
-    recommended: "VPS Comfort (4 vCPU, 16GB) or VPS Elite (8 vCPU, 32GB)",
+    recommended: "VPS-3 (8 vCPU, 24GB RAM, ~$13/month) or VPS-4 (12 vCPU, 48GB RAM, ~$22/month)",
   },
 ];
 
@@ -139,11 +139,11 @@ function ProviderCard({ provider, isExpanded, onToggle }: ProviderCardProps) {
 }
 
 const SPEC_CHECKLIST = [
-  { label: "OS", value: "Ubuntu 25.x (or newest Ubuntu)" },
+  { label: "OS", value: "Ubuntu 24.x or newer" },
   { label: "CPU", value: "8-12 vCPU" },
   { label: "RAM", value: "24-48 GB (minimum 16 GB)" },
   { label: "Storage", value: "200GB+ NVMe SSD" },
-  { label: "Price", value: "€11-25/month (~$12-27)" },
+  { label: "Price", value: "~$13-25/month (varies by provider)" },
 ];
 
 export default function RentVPSPage() {
@@ -179,7 +179,7 @@ export default function RentVPSPage() {
           </div>
           <div>
             <h1 className="bg-gradient-to-r from-foreground via-foreground to-muted-foreground bg-clip-text text-2xl font-bold tracking-tight text-transparent sm:text-3xl">
-              Rent a <Jargon term="vps">VPS</Jargon> (~€15-25/month)
+              Rent a <Jargon term="vps">VPS</Jargon> (~$13-25/month)
             </h1>
             <p className="text-sm text-muted-foreground">
               ~5 min
@@ -318,7 +318,7 @@ export default function RentVPSPage() {
               <div className="rounded-lg border border-primary/20 bg-primary/5 p-3">
                 <p className="font-medium text-foreground">Total for full setup:</p>
                 <p className="text-sm text-muted-foreground">
-                  VPS ($40) + Claude Max x2 ($400) + GPT Pro ($200) = <strong>~$640/month</strong>
+                  VPS (~$25) + Claude Max x2 ($400) + GPT Pro ($200) = <strong>~$625/month</strong>
                   <br /><br />
                   <em>This sounds like a lot, but if it helps you build and ship faster,
                   it pays for itself quickly!</em>
@@ -326,7 +326,7 @@ export default function RentVPSPage() {
               </div>
             </div>
             <p className="mt-4 text-sm text-muted-foreground">
-              <strong>Starting small?</strong> Just get a VPS ($35-40) and one Claude Pro
+              <strong>Starting small?</strong> Just get a VPS (~$13-25) and one Claude Pro
               subscription ($20). You can scale up as you see results!
             </p>
           </GuideSection>
@@ -338,13 +338,13 @@ export default function RentVPSPage() {
             <ul className="space-y-3">
               <li>
                 <strong>Contabo:</strong> Our top recommendation! Best specs for the price.
-                Look for a 16–32GB RAM plan in the ~$30–60/month range. Interface is basic but functional.
+                Cloud VPS 30 (24GB RAM, €14/month) or Cloud VPS 40 (48GB RAM, €25/month). Interface is basic but functional.
                 Instant activation with no waiting.
               </li>
               <li>
-                <strong>OVH:</strong> Good alternative with excellent support. Slightly more
-                expensive but more polished interface. Great EU data centers. Also instant
-                activation.
+                <strong>OVH:</strong> Great alternative, actually slightly cheaper! VPS-3 (24GB RAM, ~$13/month)
+                or VPS-4 (48GB RAM, ~$22/month). More polished interface. Great EU data centers.
+                Instant activation.
               </li>
             </ul>
           </GuideSection>
