@@ -26,7 +26,6 @@ interface CommandCategory {
   commands: Array<{
     command: string;
     description: string;
-    flags?: string[];
   }>;
 }
 
@@ -40,7 +39,6 @@ const categories: CommandCategory[] = [
       {
         command: "ntm spawn myproject --cc=2 --cod=1 --gmi=1",
         description: "Spawn 2 Claude, 1 Codex, 1 Gemini agents",
-        flags: ["--cc=N", "--cod=N", "--gmi=N"],
       },
       {
         command: "ntm spawn myproject --cc=3",
@@ -233,6 +231,7 @@ export default function NtmPalettePage() {
             placeholder="Search commands..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            aria-label="Search NTM commands"
             className="w-full rounded-xl border border-border/50 bg-card/50 py-3 pl-12 pr-4 text-foreground placeholder:text-muted-foreground focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
         </div>

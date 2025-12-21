@@ -59,8 +59,8 @@ const agents: AgentInfo[] = [
         description: "Resume last session",
       },
       {
-        command: "cc /compact",
-        description: "Compress context window",
+        command: "/compact",
+        description: "Compress context (type inside cc session)",
       },
       {
         command: 'cc "review this PR" --print',
@@ -148,9 +148,23 @@ function AgentCard({ agent }: { agent: AgentInfo }) {
   const [copiedAlias, setCopiedAlias] = useState<string | null>(null);
 
   const handleCopy = async (text: string) => {
-    await navigator.clipboard.writeText(text);
-    setCopiedAlias(text);
-    setTimeout(() => setCopiedAlias(null), 2000);
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedAlias(text);
+      setTimeout(() => setCopiedAlias(null), 2000);
+    } catch {
+      // Fallback for older browsers or non-HTTPS contexts
+      const textarea = document.createElement("textarea");
+      textarea.value = text;
+      textarea.style.position = "fixed";
+      textarea.style.opacity = "0";
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textarea);
+      setCopiedAlias(text);
+      setTimeout(() => setCopiedAlias(null), 2000);
+    }
   };
 
   return (
@@ -302,6 +316,7 @@ export default function AgentCommandsPage() {
             placeholder="Search agents, commands, or features..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            aria-label="Search agents, commands, or features"
             className="w-full rounded-xl border border-border/50 bg-card/50 py-3 pl-12 pr-4 text-foreground placeholder:text-muted-foreground focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
         </div>
