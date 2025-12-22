@@ -76,21 +76,21 @@ MOTD_SCRIPT
 echo -e "\${C}║\${N}  \${Y}Error:\${N} ${error_msg}"
 MOTD_ERROR
 
-	    cat >> "$motd_file" << 'MOTD_FOOTER'
-	echo -e "${C}║${N}                                                              ${C}║${N}"
-	echo -e "${C}║${N}  ${B}TO RETRY (AFTER FIXING):${N}                                    ${C}║${N}"
-	echo -e "${C}║${N}    sudo systemctl enable --now acfs-upgrade-resume            ${C}║${N}"
-	echo -e "${C}║${N}                                                              ${C}║${N}"
-	echo -e "${C}║${N}  ${B}TO CHECK STATUS:${N}                                            ${C}║${N}"
-	echo -e "${C}║${N}    /var/lib/acfs/check_status.sh                              ${C}║${N}"
-	echo -e "${C}║${N}                                                              ${C}║${N}"
-	echo -e "${C}║${N}  ${B}TO VIEW LOGS:${N}                                               ${C}║${N}"
-	echo -e "${C}║${N}    journalctl -u acfs-upgrade-resume -f                       ${C}║${N}"
-	echo -e "${C}║${N}    cat /var/log/acfs/upgrade_resume.log                       ${C}║${N}"
-	echo -e "${C}║${N}                                                              ${C}║${N}"
-	echo -e "${C}╚══════════════════════════════════════════════════════════════╝${N}"
-	echo ""
-	MOTD_FOOTER
+    cat >> "$motd_file" << 'MOTD_FOOTER'
+echo -e "${C}║${N}                                                              ${C}║${N}"
+echo -e "${C}║${N}  ${B}TO RETRY (AFTER FIXING):${N}                                    ${C}║${N}"
+echo -e "${C}║${N}    sudo systemctl enable --now acfs-upgrade-resume            ${C}║${N}"
+echo -e "${C}║${N}                                                              ${C}║${N}"
+echo -e "${C}║${N}  ${B}TO CHECK STATUS:${N}                                            ${C}║${N}"
+echo -e "${C}║${N}    /var/lib/acfs/check_status.sh                              ${C}║${N}"
+echo -e "${C}║${N}                                                              ${C}║${N}"
+echo -e "${C}║${N}  ${B}TO VIEW LOGS:${N}                                               ${C}║${N}"
+echo -e "${C}║${N}    journalctl -u acfs-upgrade-resume -f                       ${C}║${N}"
+echo -e "${C}║${N}    cat /var/log/acfs/upgrade_resume.log                       ${C}║${N}"
+echo -e "${C}║${N}                                                              ${C}║${N}"
+echo -e "${C}╚══════════════════════════════════════════════════════════════╝${N}"
+echo ""
+MOTD_FOOTER
 
     chmod +x "$motd_file"
 }

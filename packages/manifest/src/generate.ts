@@ -404,7 +404,8 @@ function generateVerifiedInstallerSnippet(module: Module): string[] {
   } else {
     // Default/root: run directly
     execCmd = buildVerifiedInstallerPipe(module);
-    fallbackShellCmd = 'bash';
+    // bash -c is needed because bash without -c treats argument as a file path, not a command
+    fallbackShellCmd = 'bash -c';
   }
 
   const lines: string[] = [

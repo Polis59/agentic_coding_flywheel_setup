@@ -124,6 +124,46 @@ agentic_coding_flywheel_setup/
 
 ---
 
+## Generated Files — NEVER Edit Manually
+
+The following files are **auto-generated** from the manifest. Edits to these files will be **overwritten** on the next regeneration.
+
+### Generated Locations
+
+```
+scripts/generated/          # ALL files in this directory
+├── install_*.sh           # Category installer scripts
+├── doctor_checks.sh       # Doctor verification checks
+└── manifest_index.sh      # Bash arrays with module metadata
+```
+
+### How to Modify Generated Code
+
+1. **Identify the generator source**: `packages/manifest/src/generate.ts`
+2. **Modify the generator**, not the output files
+3. **Regenerate**: `cd packages/manifest && bun run generate`
+4. **Verify**: `shellcheck scripts/generated/*.sh`
+
+### Key Generator Components
+
+| File | Purpose |
+|------|---------|
+| `packages/manifest/src/generate.ts` | Main generator logic |
+| `packages/manifest/src/schema.ts` | Zod schema for manifest validation |
+| `packages/manifest/src/types.ts` | TypeScript interfaces |
+| `acfs.manifest.yaml` | Source manifest (this IS hand-edited) |
+
+### Why This Matters
+
+If you manually edit a generated file:
+- Your changes **will be lost** on next `bun run generate`
+- Other developers won't know about your fix
+- CI/CD may regenerate and overwrite your work
+
+Always fix the generator, then regenerate.
+
+---
+
 ## Code Editing Discipline
 
 - Do **not** run scripts that bulk-modify code (codemods, invented one-off scripts, giant `sed`/regex refactors).
