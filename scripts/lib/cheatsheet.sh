@@ -160,22 +160,18 @@ cheatsheet_collect_entries() {
     entries+=("$line")
   done < <(cheatsheet_parse_zshrc "$zshrc" || true)
 
-  # De-dupe by name keeping the last definition.
+  # De-dupe by name keeping the first definition.
+  # This ensures preferred commands (lsd/eza) from conditional if-blocks
+  # take precedence over fallback definitions in else-blocks.
   local -A seen=()
-  local -a dedup_rev=()
   local i
-  for ((i=${#entries[@]}-1; i>=0; i--)); do
+  for ((i=0; i<${#entries[@]}; i++)); do
     IFS='|' read -r _cat name _cmd _kind <<<"${entries[$i]}"
     if [[ -n "${seen[$name]:-}" ]]; then
       continue
     fi
     seen[$name]=1
-    dedup_rev+=("${entries[$i]}")
-  done
-
-  # Reverse back to restore order of last-occurrence entries.
-  for ((i=${#dedup_rev[@]}-1; i>=0; i--)); do
-    echo "${dedup_rev[$i]}"
+    echo "${entries[$i]}"
   done
 }
 
