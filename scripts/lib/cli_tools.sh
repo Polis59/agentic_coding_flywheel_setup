@@ -229,8 +229,11 @@ install_cargo_cli_tools() {
     if ! _cli_command_exists tldr; then
         log_detail "Installing tealdeer (tldr) via cargo..."
         _cli_run_as_user "$cargo_bin install tealdeer --locked 2>/dev/null" || log_warn "Could not install tealdeer"
-        # Fetch tldr pages cache
-        _cli_run_as_user "tldr --update 2>/dev/null" || true
+        # Fetch tldr pages cache (use full path since ~/.cargo/bin may not be in PATH yet)
+        local tldr_bin="$target_home/.cargo/bin/tldr"
+        if [[ -x "$tldr_bin" ]]; then
+            _cli_run_as_user "$tldr_bin --update 2>/dev/null" || true
+        fi
     fi
 
     log_success "Cargo CLI tools installed"
