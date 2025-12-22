@@ -119,11 +119,12 @@ INSTALL_DB_POSTGRES18
 
     # Verify
     if [[ "${DRY_RUN:-false}" == "true" ]]; then
-        log_info "dry-run: verify: psql --version"
+        log_info "dry-run: verify: psql --version (root)"
     else
-        if ! {
-            psql --version
-        }; then
+        if ! run_as_root_shell <<'INSTALL_DB_POSTGRES18'
+psql --version
+INSTALL_DB_POSTGRES18
+        then
             log_warn "db.postgres18: verify failed: psql --version"
             if type -t record_skipped_tool >/dev/null 2>&1; then
               record_skipped_tool "db.postgres18" "verify failed: psql --version"
@@ -134,11 +135,12 @@ INSTALL_DB_POSTGRES18
         fi
     fi
     if [[ "${DRY_RUN:-false}" == "true" ]]; then
-        log_info "dry-run: verify (optional): systemctl status postgresql --no-pager"
+        log_info "dry-run: verify (optional): systemctl status postgresql --no-pager (root)"
     else
-        if ! {
-            systemctl status postgresql --no-pager
-        }; then
+        if ! run_as_root_shell <<'INSTALL_DB_POSTGRES18'
+systemctl status postgresql --no-pager
+INSTALL_DB_POSTGRES18
+        then
             log_warn "Optional verify failed: db.postgres18"
         fi
     fi

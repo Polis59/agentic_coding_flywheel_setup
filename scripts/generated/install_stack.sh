@@ -90,11 +90,12 @@ install_stack_ntm() {
 
     # Verify
     if [[ "${DRY_RUN:-false}" == "true" ]]; then
-        log_info "dry-run: verify: ntm --help"
+        log_info "dry-run: verify: ntm --help (target_user)"
     else
-        if ! {
-            ntm --help
-        }; then
+        if ! run_as_target_shell <<'INSTALL_STACK_NTM'
+ntm --help
+INSTALL_STACK_NTM
+        then
             log_error "stack.ntm: verify failed: ntm --help"
             return 1
         fi
@@ -137,21 +138,23 @@ install_stack_mcp_agent_mail() {
 
     # Verify
     if [[ "${DRY_RUN:-false}" == "true" ]]; then
-        log_info "dry-run: verify: command -v am"
+        log_info "dry-run: verify: command -v am (target_user)"
     else
-        if ! {
-            command -v am
-        }; then
+        if ! run_as_target_shell <<'INSTALL_STACK_MCP_AGENT_MAIL'
+command -v am
+INSTALL_STACK_MCP_AGENT_MAIL
+        then
             log_error "stack.mcp_agent_mail: verify failed: command -v am"
             return 1
         fi
     fi
     if [[ "${DRY_RUN:-false}" == "true" ]]; then
-        log_info "dry-run: verify (optional): curl -fsS http://127.0.0.1:8765/health"
+        log_info "dry-run: verify (optional): curl -fsS http://127.0.0.1:8765/health (target_user)"
     else
-        if ! {
-            curl -fsS http://127.0.0.1:8765/health
-        }; then
+        if ! run_as_target_shell <<'INSTALL_STACK_MCP_AGENT_MAIL'
+curl -fsS http://127.0.0.1:8765/health
+INSTALL_STACK_MCP_AGENT_MAIL
+        then
             log_warn "Optional verify failed: stack.mcp_agent_mail"
         fi
     fi
@@ -193,21 +196,23 @@ install_stack_ultimate_bug_scanner() {
 
     # Verify
     if [[ "${DRY_RUN:-false}" == "true" ]]; then
-        log_info "dry-run: verify: ubs --help"
+        log_info "dry-run: verify: ubs --help (target_user)"
     else
-        if ! {
-            ubs --help
-        }; then
+        if ! run_as_target_shell <<'INSTALL_STACK_ULTIMATE_BUG_SCANNER'
+ubs --help
+INSTALL_STACK_ULTIMATE_BUG_SCANNER
+        then
             log_error "stack.ultimate_bug_scanner: verify failed: ubs --help"
             return 1
         fi
     fi
     if [[ "${DRY_RUN:-false}" == "true" ]]; then
-        log_info "dry-run: verify (optional): ubs doctor"
+        log_info "dry-run: verify (optional): ubs doctor (target_user)"
     else
-        if ! {
-            ubs doctor
-        }; then
+        if ! run_as_target_shell <<'INSTALL_STACK_ULTIMATE_BUG_SCANNER'
+ubs doctor
+INSTALL_STACK_ULTIMATE_BUG_SCANNER
+        then
             log_warn "Optional verify failed: stack.ultimate_bug_scanner"
         fi
     fi
@@ -249,11 +254,12 @@ install_stack_beads_viewer() {
 
     # Verify
     if [[ "${DRY_RUN:-false}" == "true" ]]; then
-        log_info "dry-run: verify: bv --help || bv --version"
+        log_info "dry-run: verify: bv --help || bv --version (target_user)"
     else
-        if ! {
-            bv --help || bv --version
-        }; then
+        if ! run_as_target_shell <<'INSTALL_STACK_BEADS_VIEWER'
+bv --help || bv --version
+INSTALL_STACK_BEADS_VIEWER
+        then
             log_error "stack.beads_viewer: verify failed: bv --help || bv --version"
             return 1
         fi
@@ -296,11 +302,12 @@ install_stack_cass() {
 
     # Verify
     if [[ "${DRY_RUN:-false}" == "true" ]]; then
-        log_info "dry-run: verify: cass --help || cass --version"
+        log_info "dry-run: verify: cass --help || cass --version (target_user)"
     else
-        if ! {
-            cass --help || cass --version
-        }; then
+        if ! run_as_target_shell <<'INSTALL_STACK_CASS'
+cass --help || cass --version
+INSTALL_STACK_CASS
+        then
             log_error "stack.cass: verify failed: cass --help || cass --version"
             return 1
         fi
@@ -343,21 +350,23 @@ install_stack_cm() {
 
     # Verify
     if [[ "${DRY_RUN:-false}" == "true" ]]; then
-        log_info "dry-run: verify: cm --version"
+        log_info "dry-run: verify: cm --version (target_user)"
     else
-        if ! {
-            cm --version
-        }; then
+        if ! run_as_target_shell <<'INSTALL_STACK_CM'
+cm --version
+INSTALL_STACK_CM
+        then
             log_error "stack.cm: verify failed: cm --version"
             return 1
         fi
     fi
     if [[ "${DRY_RUN:-false}" == "true" ]]; then
-        log_info "dry-run: verify (optional): cm doctor --json"
+        log_info "dry-run: verify (optional): cm doctor --json (target_user)"
     else
-        if ! {
-            cm doctor --json
-        }; then
+        if ! run_as_target_shell <<'INSTALL_STACK_CM'
+cm doctor --json
+INSTALL_STACK_CM
+        then
             log_warn "Optional verify failed: stack.cm"
         fi
     fi
@@ -399,11 +408,12 @@ install_stack_caam() {
 
     # Verify
     if [[ "${DRY_RUN:-false}" == "true" ]]; then
-        log_info "dry-run: verify: caam status || caam --help"
+        log_info "dry-run: verify: caam status || caam --help (target_user)"
     else
-        if ! {
-            caam status || caam --help
-        }; then
+        if ! run_as_target_shell <<'INSTALL_STACK_CAAM'
+caam status || caam --help
+INSTALL_STACK_CAAM
+        then
             log_error "stack.caam: verify failed: caam status || caam --help"
             return 1
         fi
@@ -451,11 +461,12 @@ install_stack_slb() {
 
     # Verify
     if [[ "${DRY_RUN:-false}" == "true" ]]; then
-        log_info "dry-run: verify: slb --help"
+        log_info "dry-run: verify: slb --help (target_user)"
     else
-        if ! {
-            slb --help
-        }; then
+        if ! run_as_target_shell <<'INSTALL_STACK_SLB'
+slb --help
+INSTALL_STACK_SLB
+        then
             log_warn "stack.slb: verify failed: slb --help"
             if type -t record_skipped_tool >/dev/null 2>&1; then
               record_skipped_tool "stack.slb" "verify failed: slb --help"

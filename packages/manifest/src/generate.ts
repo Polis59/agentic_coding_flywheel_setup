@@ -289,16 +289,25 @@ function wrapInstallHeredoc(
   return lines;
 }
 
-function wrapOptionalVerifyBlock(module: Module, summary: string, commandLines: string[]): string[] {
+function wrapOptionalVerifyHeredoc(
+  module: Module,
+  summary: string,
+  commandLines: string[]
+): string[] {
   const lines: string[] = [];
   const escapedSummary = escapeBash(summary);
+  const shellHelper = getRunAsShellHelper(module.run_as);
+  const delimiter = toHeredocDelimiter(module.id);
 
   lines.push('    if [[ "${DRY_RUN:-false}" == "true" ]]; then');
-  lines.push(`        log_info "dry-run: verify (optional): ${escapedSummary}"`);
+  lines.push(`        log_info "dry-run: verify (optional): ${escapedSummary} (${module.run_as})"`);
   lines.push('    else');
-  lines.push('        if ! {');
-  lines.push(...indentLines(commandLines, 12));
-  lines.push('        }; then');
+  lines.push(`        if ! ${shellHelper} <<'${delimiter}'`);
+  for (const cmd of commandLines) {
+    lines.push(cmd);
+  }
+  lines.push(delimiter);
+  lines.push('        then');
   lines.push(`            log_warn "Optional verify failed: ${module.id}"`);
   lines.push('        fi');
   lines.push('    fi');
@@ -470,10 +479,10 @@ function generateVerifyCommands(module: Module): string[] {
     const summary = blockLines[0]?.trim() || 'verify command';
 
     if (isOptional) {
-      lines.push(...wrapOptionalVerifyBlock(module, summary, blockLines));
+      lines.push(...wrapOptionalVerifyHeredoc(module, summary, blockLines));
     } else {
       lines.push(
-        ...wrapCommandBlock(
+        ...wrapInstallHeredoc(
           module,
           `verify: ${summary}`,
           blockLines,

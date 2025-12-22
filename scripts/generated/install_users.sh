@@ -65,21 +65,23 @@ install_users_ubuntu() {
 
     # Verify
     if [[ "${DRY_RUN:-false}" == "true" ]]; then
-        log_info "dry-run: verify: id ubuntu"
+        log_info "dry-run: verify: id ubuntu (root)"
     else
-        if ! {
-            id ubuntu
-        }; then
+        if ! run_as_root_shell <<'INSTALL_USERS_UBUNTU'
+id ubuntu
+INSTALL_USERS_UBUNTU
+        then
             log_error "users.ubuntu: verify failed: id ubuntu"
             return 1
         fi
     fi
     if [[ "${DRY_RUN:-false}" == "true" ]]; then
-        log_info "dry-run: verify: sudo -n true"
+        log_info "dry-run: verify: sudo -n true (root)"
     else
-        if ! {
-            sudo -n true
-        }; then
+        if ! run_as_root_shell <<'INSTALL_USERS_UBUNTU'
+sudo -n true
+INSTALL_USERS_UBUNTU
+        then
             log_error "users.ubuntu: verify failed: sudo -n true"
             return 1
         fi

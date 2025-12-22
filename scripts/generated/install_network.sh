@@ -88,21 +88,23 @@ INSTALL_NETWORK_TAILSCALE
 
     # Verify
     if [[ "${DRY_RUN:-false}" == "true" ]]; then
-        log_info "dry-run: verify: tailscale version"
+        log_info "dry-run: verify: tailscale version (root)"
     else
-        if ! {
-            tailscale version
-        }; then
+        if ! run_as_root_shell <<'INSTALL_NETWORK_TAILSCALE'
+tailscale version
+INSTALL_NETWORK_TAILSCALE
+        then
             log_error "network.tailscale: verify failed: tailscale version"
             return 1
         fi
     fi
     if [[ "${DRY_RUN:-false}" == "true" ]]; then
-        log_info "dry-run: verify: systemctl is-enabled tailscaled"
+        log_info "dry-run: verify: systemctl is-enabled tailscaled (root)"
     else
-        if ! {
-            systemctl is-enabled tailscaled
-        }; then
+        if ! run_as_root_shell <<'INSTALL_NETWORK_TAILSCALE'
+systemctl is-enabled tailscaled
+INSTALL_NETWORK_TAILSCALE
+        then
             log_error "network.tailscale: verify failed: systemctl is-enabled tailscaled"
             return 1
         fi

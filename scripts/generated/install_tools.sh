@@ -90,11 +90,12 @@ install_tools_atuin() {
 
     # Verify
     if [[ "${DRY_RUN:-false}" == "true" ]]; then
-        log_info "dry-run: verify: ~/.atuin/bin/atuin --version"
+        log_info "dry-run: verify: ~/.atuin/bin/atuin --version (target_user)"
     else
-        if ! {
-            ~/.atuin/bin/atuin --version
-        }; then
+        if ! run_as_target_shell <<'INSTALL_TOOLS_ATUIN'
+~/.atuin/bin/atuin --version
+INSTALL_TOOLS_ATUIN
+        then
             log_error "tools.atuin: verify failed: ~/.atuin/bin/atuin --version"
             return 1
         fi
@@ -137,11 +138,12 @@ install_tools_zoxide() {
 
     # Verify
     if [[ "${DRY_RUN:-false}" == "true" ]]; then
-        log_info "dry-run: verify: command -v zoxide"
+        log_info "dry-run: verify: command -v zoxide (target_user)"
     else
-        if ! {
-            command -v zoxide
-        }; then
+        if ! run_as_target_shell <<'INSTALL_TOOLS_ZOXIDE'
+command -v zoxide
+INSTALL_TOOLS_ZOXIDE
+        then
             log_error "tools.zoxide: verify failed: command -v zoxide"
             return 1
         fi
@@ -170,11 +172,12 @@ INSTALL_TOOLS_AST_GREP
 
     # Verify
     if [[ "${DRY_RUN:-false}" == "true" ]]; then
-        log_info "dry-run: verify: sg --version"
+        log_info "dry-run: verify: sg --version (target_user)"
     else
-        if ! {
-            sg --version
-        }; then
+        if ! run_as_target_shell <<'INSTALL_TOOLS_AST_GREP'
+sg --version
+INSTALL_TOOLS_AST_GREP
+        then
             log_error "tools.ast_grep: verify failed: sg --version"
             return 1
         fi
@@ -240,11 +243,12 @@ INSTALL_TOOLS_VAULT
 
     # Verify
     if [[ "${DRY_RUN:-false}" == "true" ]]; then
-        log_info "dry-run: verify: vault --version"
+        log_info "dry-run: verify: vault --version (root)"
     else
-        if ! {
-            vault --version
-        }; then
+        if ! run_as_root_shell <<'INSTALL_TOOLS_VAULT'
+vault --version
+INSTALL_TOOLS_VAULT
+        then
             log_warn "tools.vault: verify failed: vault --version"
             if type -t record_skipped_tool >/dev/null 2>&1; then
               record_skipped_tool "tools.vault" "verify failed: vault --version"

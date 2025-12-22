@@ -87,31 +87,34 @@ INSTALL_BASE_SYSTEM
 
     # Verify
     if [[ "${DRY_RUN:-false}" == "true" ]]; then
-        log_info "dry-run: verify: curl --version"
+        log_info "dry-run: verify: curl --version (root)"
     else
-        if ! {
-            curl --version
-        }; then
+        if ! run_as_root_shell <<'INSTALL_BASE_SYSTEM'
+curl --version
+INSTALL_BASE_SYSTEM
+        then
             log_error "base.system: verify failed: curl --version"
             return 1
         fi
     fi
     if [[ "${DRY_RUN:-false}" == "true" ]]; then
-        log_info "dry-run: verify: git --version"
+        log_info "dry-run: verify: git --version (root)"
     else
-        if ! {
-            git --version
-        }; then
+        if ! run_as_root_shell <<'INSTALL_BASE_SYSTEM'
+git --version
+INSTALL_BASE_SYSTEM
+        then
             log_error "base.system: verify failed: git --version"
             return 1
         fi
     fi
     if [[ "${DRY_RUN:-false}" == "true" ]]; then
-        log_info "dry-run: verify: jq --version"
+        log_info "dry-run: verify: jq --version (root)"
     else
-        if ! {
-            jq --version
-        }; then
+        if ! run_as_root_shell <<'INSTALL_BASE_SYSTEM'
+jq --version
+INSTALL_BASE_SYSTEM
+        then
             log_error "base.system: verify failed: jq --version"
             return 1
         fi
@@ -151,21 +154,23 @@ INSTALL_BASE_FILESYSTEM
 
     # Verify
     if [[ "${DRY_RUN:-false}" == "true" ]]; then
-        log_info "dry-run: verify: test -d /data/projects"
+        log_info "dry-run: verify: test -d /data/projects (root)"
     else
-        if ! {
-            test -d /data/projects
-        }; then
+        if ! run_as_root_shell <<'INSTALL_BASE_FILESYSTEM'
+test -d /data/projects
+INSTALL_BASE_FILESYSTEM
+        then
             log_error "base.filesystem: verify failed: test -d /data/projects"
             return 1
         fi
     fi
     if [[ "${DRY_RUN:-false}" == "true" ]]; then
-        log_info "dry-run: verify: test -d ~/.acfs"
+        log_info "dry-run: verify: test -d ~/.acfs (root)"
     else
-        if ! {
-            test -d ~/.acfs
-        }; then
+        if ! run_as_root_shell <<'INSTALL_BASE_FILESYSTEM'
+test -d ~/.acfs
+INSTALL_BASE_FILESYSTEM
+        then
             log_error "base.filesystem: verify failed: test -d ~/.acfs"
             return 1
         fi

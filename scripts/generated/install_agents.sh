@@ -90,11 +90,12 @@ install_agents_claude() {
 
     # Verify
     if [[ "${DRY_RUN:-false}" == "true" ]]; then
-        log_info "dry-run: verify: claude --version || claude --help"
+        log_info "dry-run: verify: claude --version || claude --help (target_user)"
     else
-        if ! {
-            claude --version || claude --help
-        }; then
+        if ! run_as_target_shell <<'INSTALL_AGENTS_CLAUDE'
+claude --version || claude --help
+INSTALL_AGENTS_CLAUDE
+        then
             log_error "agents.claude: verify failed: claude --version || claude --help"
             return 1
         fi
@@ -123,11 +124,12 @@ INSTALL_AGENTS_CODEX
 
     # Verify
     if [[ "${DRY_RUN:-false}" == "true" ]]; then
-        log_info "dry-run: verify: codex --version || codex --help"
+        log_info "dry-run: verify: codex --version || codex --help (target_user)"
     else
-        if ! {
-            codex --version || codex --help
-        }; then
+        if ! run_as_target_shell <<'INSTALL_AGENTS_CODEX'
+codex --version || codex --help
+INSTALL_AGENTS_CODEX
+        then
             log_error "agents.codex: verify failed: codex --version || codex --help"
             return 1
         fi
@@ -156,11 +158,12 @@ INSTALL_AGENTS_GEMINI
 
     # Verify
     if [[ "${DRY_RUN:-false}" == "true" ]]; then
-        log_info "dry-run: verify: gemini --version || gemini --help"
+        log_info "dry-run: verify: gemini --version || gemini --help (target_user)"
     else
-        if ! {
-            gemini --version || gemini --help
-        }; then
+        if ! run_as_target_shell <<'INSTALL_AGENTS_GEMINI'
+gemini --version || gemini --help
+INSTALL_AGENTS_GEMINI
+        then
             log_error "agents.gemini: verify failed: gemini --version || gemini --help"
             return 1
         fi

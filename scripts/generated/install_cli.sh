@@ -186,111 +186,122 @@ INSTALL_CLI_MODERN
 
     # Verify
     if [[ "${DRY_RUN:-false}" == "true" ]]; then
-        log_info "dry-run: verify: rg --version"
+        log_info "dry-run: verify: rg --version (root)"
     else
-        if ! {
-            rg --version
-        }; then
+        if ! run_as_root_shell <<'INSTALL_CLI_MODERN'
+rg --version
+INSTALL_CLI_MODERN
+        then
             log_error "cli.modern: verify failed: rg --version"
             return 1
         fi
     fi
     if [[ "${DRY_RUN:-false}" == "true" ]]; then
-        log_info "dry-run: verify: tmux -V"
+        log_info "dry-run: verify: tmux -V (root)"
     else
-        if ! {
-            tmux -V
-        }; then
+        if ! run_as_root_shell <<'INSTALL_CLI_MODERN'
+tmux -V
+INSTALL_CLI_MODERN
+        then
             log_error "cli.modern: verify failed: tmux -V"
             return 1
         fi
     fi
     if [[ "${DRY_RUN:-false}" == "true" ]]; then
-        log_info "dry-run: verify: fzf --version"
+        log_info "dry-run: verify: fzf --version (root)"
     else
-        if ! {
-            fzf --version
-        }; then
+        if ! run_as_root_shell <<'INSTALL_CLI_MODERN'
+fzf --version
+INSTALL_CLI_MODERN
+        then
             log_error "cli.modern: verify failed: fzf --version"
             return 1
         fi
     fi
     if [[ "${DRY_RUN:-false}" == "true" ]]; then
-        log_info "dry-run: verify: gh --version"
+        log_info "dry-run: verify: gh --version (root)"
     else
-        if ! {
-            gh --version
-        }; then
+        if ! run_as_root_shell <<'INSTALL_CLI_MODERN'
+gh --version
+INSTALL_CLI_MODERN
+        then
             log_error "cli.modern: verify failed: gh --version"
             return 1
         fi
     fi
     if [[ "${DRY_RUN:-false}" == "true" ]]; then
-        log_info "dry-run: verify: git-lfs version"
+        log_info "dry-run: verify: git-lfs version (root)"
     else
-        if ! {
-            git-lfs version
-        }; then
+        if ! run_as_root_shell <<'INSTALL_CLI_MODERN'
+git-lfs version
+INSTALL_CLI_MODERN
+        then
             log_error "cli.modern: verify failed: git-lfs version"
             return 1
         fi
     fi
     if [[ "${DRY_RUN:-false}" == "true" ]]; then
-        log_info "dry-run: verify: rsync --version"
+        log_info "dry-run: verify: rsync --version (root)"
     else
-        if ! {
-            rsync --version
-        }; then
+        if ! run_as_root_shell <<'INSTALL_CLI_MODERN'
+rsync --version
+INSTALL_CLI_MODERN
+        then
             log_error "cli.modern: verify failed: rsync --version"
             return 1
         fi
     fi
     if [[ "${DRY_RUN:-false}" == "true" ]]; then
-        log_info "dry-run: verify: strace --version"
+        log_info "dry-run: verify: strace --version (root)"
     else
-        if ! {
-            strace --version
-        }; then
+        if ! run_as_root_shell <<'INSTALL_CLI_MODERN'
+strace --version
+INSTALL_CLI_MODERN
+        then
             log_error "cli.modern: verify failed: strace --version"
             return 1
         fi
     fi
     if [[ "${DRY_RUN:-false}" == "true" ]]; then
-        log_info "dry-run: verify: command -v lsof"
+        log_info "dry-run: verify: command -v lsof (root)"
     else
-        if ! {
-            command -v lsof
-        }; then
+        if ! run_as_root_shell <<'INSTALL_CLI_MODERN'
+command -v lsof
+INSTALL_CLI_MODERN
+        then
             log_error "cli.modern: verify failed: command -v lsof"
             return 1
         fi
     fi
     if [[ "${DRY_RUN:-false}" == "true" ]]; then
-        log_info "dry-run: verify: command -v dig"
+        log_info "dry-run: verify: command -v dig (root)"
     else
-        if ! {
-            command -v dig
-        }; then
+        if ! run_as_root_shell <<'INSTALL_CLI_MODERN'
+command -v dig
+INSTALL_CLI_MODERN
+        then
             log_error "cli.modern: verify failed: command -v dig"
             return 1
         fi
     fi
     if [[ "${DRY_RUN:-false}" == "true" ]]; then
-        log_info "dry-run: verify: command -v nc"
+        log_info "dry-run: verify: command -v nc (root)"
     else
-        if ! {
-            command -v nc
-        }; then
+        if ! run_as_root_shell <<'INSTALL_CLI_MODERN'
+command -v nc
+INSTALL_CLI_MODERN
+        then
             log_error "cli.modern: verify failed: command -v nc"
             return 1
         fi
     fi
     if [[ "${DRY_RUN:-false}" == "true" ]]; then
-        log_info "dry-run: verify (optional): command -v lsd || command -v eza"
+        log_info "dry-run: verify (optional): command -v lsd || command -v eza (root)"
     else
-        if ! {
-            command -v lsd || command -v eza
-        }; then
+        if ! run_as_root_shell <<'INSTALL_CLI_MODERN'
+command -v lsd || command -v eza
+INSTALL_CLI_MODERN
+        then
             log_warn "Optional verify failed: cli.modern"
         fi
     fi

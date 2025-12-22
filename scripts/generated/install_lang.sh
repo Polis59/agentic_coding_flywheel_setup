@@ -90,11 +90,12 @@ install_lang_bun() {
 
     # Verify
     if [[ "${DRY_RUN:-false}" == "true" ]]; then
-        log_info "dry-run: verify: ~/.bun/bin/bun --version"
+        log_info "dry-run: verify: ~/.bun/bin/bun --version (target_user)"
     else
-        if ! {
-            ~/.bun/bin/bun --version
-        }; then
+        if ! run_as_target_shell <<'INSTALL_LANG_BUN'
+~/.bun/bin/bun --version
+INSTALL_LANG_BUN
+        then
             log_error "lang.bun: verify failed: ~/.bun/bin/bun --version"
             return 1
         fi
@@ -137,11 +138,12 @@ install_lang_uv() {
 
     # Verify
     if [[ "${DRY_RUN:-false}" == "true" ]]; then
-        log_info "dry-run: verify: ~/.local/bin/uv --version"
+        log_info "dry-run: verify: ~/.local/bin/uv --version (target_user)"
     else
-        if ! {
-            ~/.local/bin/uv --version
-        }; then
+        if ! run_as_target_shell <<'INSTALL_LANG_UV'
+~/.local/bin/uv --version
+INSTALL_LANG_UV
+        then
             log_error "lang.uv: verify failed: ~/.local/bin/uv --version"
             return 1
         fi
@@ -184,11 +186,12 @@ install_lang_rust() {
 
     # Verify
     if [[ "${DRY_RUN:-false}" == "true" ]]; then
-        log_info "dry-run: verify: ~/.cargo/bin/cargo --version"
+        log_info "dry-run: verify: ~/.cargo/bin/cargo --version (target_user)"
     else
-        if ! {
-            ~/.cargo/bin/cargo --version
-        }; then
+        if ! run_as_target_shell <<'INSTALL_LANG_RUST'
+~/.cargo/bin/cargo --version
+INSTALL_LANG_RUST
+        then
             log_error "lang.rust: verify failed: ~/.cargo/bin/cargo --version"
             return 1
         fi
@@ -217,11 +220,12 @@ INSTALL_LANG_GO
 
     # Verify
     if [[ "${DRY_RUN:-false}" == "true" ]]; then
-        log_info "dry-run: verify: go version"
+        log_info "dry-run: verify: go version (root)"
     else
-        if ! {
-            go version
-        }; then
+        if ! run_as_root_shell <<'INSTALL_LANG_GO'
+go version
+INSTALL_LANG_GO
+        then
             log_error "lang.go: verify failed: go version"
             return 1
         fi

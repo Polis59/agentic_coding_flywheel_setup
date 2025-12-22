@@ -76,21 +76,23 @@ INSTALL_SHELL_ZSH
 
     # Verify
     if [[ "${DRY_RUN:-false}" == "true" ]]; then
-        log_info "dry-run: verify: zsh --version"
+        log_info "dry-run: verify: zsh --version (target_user)"
     else
-        if ! {
-            zsh --version
-        }; then
+        if ! run_as_target_shell <<'INSTALL_SHELL_ZSH'
+zsh --version
+INSTALL_SHELL_ZSH
+        then
             log_error "shell.zsh: verify failed: zsh --version"
             return 1
         fi
     fi
     if [[ "${DRY_RUN:-false}" == "true" ]]; then
-        log_info "dry-run: verify: test -f ~/.acfs/zsh/acfs.zshrc"
+        log_info "dry-run: verify: test -f ~/.acfs/zsh/acfs.zshrc (target_user)"
     else
-        if ! {
-            test -f ~/.acfs/zsh/acfs.zshrc
-        }; then
+        if ! run_as_target_shell <<'INSTALL_SHELL_ZSH'
+test -f ~/.acfs/zsh/acfs.zshrc
+INSTALL_SHELL_ZSH
+        then
             log_error "shell.zsh: verify failed: test -f ~/.acfs/zsh/acfs.zshrc"
             return 1
         fi

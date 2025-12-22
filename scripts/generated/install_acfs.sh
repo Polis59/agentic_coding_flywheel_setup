@@ -65,11 +65,12 @@ install_acfs_onboard() {
 
     # Verify
     if [[ "${DRY_RUN:-false}" == "true" ]]; then
-        log_info "dry-run: verify: onboard --help || command -v onboard"
+        log_info "dry-run: verify: onboard --help || command -v onboard (target_user)"
     else
-        if ! {
-            onboard --help || command -v onboard
-        }; then
+        if ! run_as_target_shell <<'INSTALL_ACFS_ONBOARD'
+onboard --help || command -v onboard
+INSTALL_ACFS_ONBOARD
+        then
             log_error "acfs.onboard: verify failed: onboard --help || command -v onboard"
             return 1
         fi
@@ -87,11 +88,12 @@ install_acfs_doctor() {
 
     # Verify
     if [[ "${DRY_RUN:-false}" == "true" ]]; then
-        log_info "dry-run: verify: acfs doctor --help || command -v acfs"
+        log_info "dry-run: verify: acfs doctor --help || command -v acfs (target_user)"
     else
-        if ! {
-            acfs doctor --help || command -v acfs
-        }; then
+        if ! run_as_target_shell <<'INSTALL_ACFS_DOCTOR'
+acfs doctor --help || command -v acfs
+INSTALL_ACFS_DOCTOR
+        then
             log_error "acfs.doctor: verify failed: acfs doctor --help || command -v acfs"
             return 1
         fi

@@ -81,11 +81,12 @@ INSTALL_CLOUD_WRANGLER
 
     # Verify
     if [[ "${DRY_RUN:-false}" == "true" ]]; then
-        log_info "dry-run: verify: wrangler --version"
+        log_info "dry-run: verify: wrangler --version (target_user)"
     else
-        if ! {
-            wrangler --version
-        }; then
+        if ! run_as_target_shell <<'INSTALL_CLOUD_WRANGLER'
+wrangler --version
+INSTALL_CLOUD_WRANGLER
+        then
             log_warn "cloud.wrangler: verify failed: wrangler --version"
             if type -t record_skipped_tool >/dev/null 2>&1; then
               record_skipped_tool "cloud.wrangler" "verify failed: wrangler --version"
@@ -124,11 +125,12 @@ INSTALL_CLOUD_SUPABASE
 
     # Verify
     if [[ "${DRY_RUN:-false}" == "true" ]]; then
-        log_info "dry-run: verify: supabase --version"
+        log_info "dry-run: verify: supabase --version (target_user)"
     else
-        if ! {
-            supabase --version
-        }; then
+        if ! run_as_target_shell <<'INSTALL_CLOUD_SUPABASE'
+supabase --version
+INSTALL_CLOUD_SUPABASE
+        then
             log_warn "cloud.supabase: verify failed: supabase --version"
             if type -t record_skipped_tool >/dev/null 2>&1; then
               record_skipped_tool "cloud.supabase" "verify failed: supabase --version"
@@ -167,11 +169,12 @@ INSTALL_CLOUD_VERCEL
 
     # Verify
     if [[ "${DRY_RUN:-false}" == "true" ]]; then
-        log_info "dry-run: verify: vercel --version"
+        log_info "dry-run: verify: vercel --version (target_user)"
     else
-        if ! {
-            vercel --version
-        }; then
+        if ! run_as_target_shell <<'INSTALL_CLOUD_VERCEL'
+vercel --version
+INSTALL_CLOUD_VERCEL
+        then
             log_warn "cloud.vercel: verify failed: vercel --version"
             if type -t record_skipped_tool >/dev/null 2>&1; then
               record_skipped_tool "cloud.vercel" "verify failed: vercel --version"
