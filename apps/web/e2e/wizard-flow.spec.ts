@@ -347,6 +347,14 @@ test.describe("State Persistence", () => {
     await expect(page.locator('text="Valid IP address"')).toBeVisible({ timeout: 10000 });
     await page.click('button:has-text("Continue to SSH")');
 
+    // Wait for navigation to complete (prevents flaky reads of URL/localStorage)
+    await expect(page).toHaveURL(urlPathWithOptionalQuery("/wizard/ssh-connect"), {
+      timeout: TIMEOUTS.NAVIGATION,
+    });
+
+    // Reload to ensure persistence holds across refresh
+    await page.reload();
+
     // Check localStorage
     const ip = await page.evaluate(() => localStorage.getItem("agent-flywheel-vps-ip"));
     expect(ip).toBe("10.0.0.50");
