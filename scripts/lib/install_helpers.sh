@@ -417,6 +417,9 @@ _acfs_category_is_migrated() {
 
     local c=""
     for c in "${migrated_categories[@]}"; do
+        # Trim leading/trailing whitespace
+        c="${c#"${c%%[![:space:]]*}"}"
+        c="${c%"${c##*[![:space:]]}"}"
         [[ -n "$c" ]] || continue
         if [[ "${c,,}" == "${category,,}" ]]; then
             return 0
