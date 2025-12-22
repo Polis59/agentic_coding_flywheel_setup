@@ -469,13 +469,17 @@ function MobileBottomSheet({
 
       {/* Sheet */}
       <div className="fixed inset-x-0 bottom-0 z-50 lg:hidden animate-slide-up">
-        <div className="rounded-t-3xl border-t border-border/50 bg-card/95 backdrop-blur-xl">
+        <div className="flex max-h-[70vh] flex-col rounded-t-3xl border-t border-border/50 bg-card/95 backdrop-blur-xl">
           {/* Handle */}
-          <div className="flex justify-center pt-3 pb-2">
+          <div className="flex shrink-0 justify-center pt-3 pb-2">
             <div className="h-1 w-10 rounded-full bg-muted-foreground/30" />
           </div>
 
-          <div className="max-h-[70vh] overflow-y-auto px-5 pb-8">
+          {/* Scrollable content - iOS needs overscroll-contain for proper scrolling */}
+          <div
+            className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-8"
+            style={{ WebkitOverflowScrolling: 'touch' }}
+          >
             {/* Header */}
             <div className="flex items-center gap-4 py-4">
               <div
