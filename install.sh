@@ -33,6 +33,13 @@
 
 set -euo pipefail
 
+# Prevent apt/dpkg from displaying interactive dialogs (kernel upgrade prompts,
+# debconf questions, etc.) that corrupt the terminal with ncurses escape sequences
+export DEBIAN_FRONTEND=noninteractive
+export NEEDRESTART_MODE=a    # Automatically restart services without asking
+export NEEDRESTART_SUSPEND=1 # Suppress needrestart prompts during installation
+export DEBCONF_NONINTERACTIVE_SEEN=true
+
 # ============================================================
 # Configuration
 # ============================================================
@@ -416,19 +423,32 @@ Signed-By: /etc/apt/keyrings/charm.gpg
 EOF
 
     # Step 3: Update apt (this can be slow on fresh systems)
+    # Disable fancy progress to prevent terminal cursor issues
     echo -e "\033[0;90m      ↳ Updating package lists (may take 30-60s on fresh systems)...\033[0m" >&2
-    if ! timeout 120 $sudo_cmd apt-get update -y >/dev/null 2>&1; then
-        echo -e "\033[0;33m      ⚠ apt-get update slow/failed (skipping gum, will retry later)\033[0m" >&2
+    if ! DEBIAN_FRONTEND=noninteractive timeout 120 $sudo_cmd apt-get update -y \
+        -o Dpkg::Progress-Fancy="0" -o APT::Color="0" >/dev/null 2>&1; then
+        # Reset terminal line position in case apt left cursor in bad state
+        echo -e "\r\033[K\033[0;33m      ⚠ apt-get update slow/failed (skipping gum, will retry later)\033[0m" >&2
         return 0
     fi
 
     # Step 4: Install gum
+    # Use DEBIAN_FRONTEND=noninteractive and disable fancy progress to prevent
+    # terminal cursor position issues when apt-get fails or times out
     echo -e "\033[0;90m      ↳ Installing gum package...\033[0m" >&2
-    if timeout 60 $sudo_cmd apt-get install -y gum >/dev/null 2>&1; then
+    local apt_output
+    if apt_output=$(DEBIAN_FRONTEND=noninteractive timeout 60 $sudo_cmd apt-get install -y \
+        -o Dpkg::Progress-Fancy="0" -o APT::Color="0" gum 2>&1); then
         HAS_GUM=true
-        echo -e "\033[0;32m    ✓ gum installed - enhanced UI enabled!\033[0m" >&2
+        # Reset terminal line position and show success
+        echo -e "\r\033[K\033[0;32m    ✓ gum installed - enhanced UI enabled!\033[0m" >&2
     else
-        echo -e "\033[0;33m      ⚠ gum install failed (continuing without enhanced UI)\033[0m" >&2
+        # Reset terminal line position in case apt left cursor in bad state
+        echo -e "\r\033[K\033[0;33m      ⚠ gum install failed (continuing without enhanced UI)\033[0m" >&2
+        # Show brief reason if available (e.g., "Unable to locate package", timeout, etc.)
+        if echo "$apt_output" | grep -qi "unable to locate\|not found\|timeout"; then
+            echo -e "\033[0;90m        (Charm repository may be unavailable or package not found)\033[0m" >&2
+        fi
     fi
 }
 
@@ -436,6 +456,10 @@ EOF
 # ASCII Art Banner
 # ============================================================
 print_banner() {
+    # Ensure terminal is in a clean state before printing banner
+    # (previous apt/dpkg operations may have left cursor in bad position)
+    echo -e "\r\033[K" >&2
+
     # Build version line with proper padding (63 chars inner width)
     local version_text="Agentic Coding Flywheel Setup v${ACFS_VERSION}"
     local padding=$(( (63 - ${#version_text}) / 2 ))
