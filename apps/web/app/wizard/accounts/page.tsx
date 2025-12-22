@@ -10,6 +10,7 @@ import {
   Shield,
   Bot,
   Cloud,
+  DollarSign,
   Sparkles,
   Terminal,
   ChevronDown,
@@ -114,10 +115,24 @@ function ServiceCard({ service, isChecked, onToggle }: ServiceCardProps) {
             <span className="text-xs text-muted-foreground">
               by {service.provider}
             </span>
+            {service.requiresSubscription && (
+              <div
+                className="inline-flex items-center gap-1 rounded-full bg-amber-500/20 px-2 py-0.5 text-xs font-medium text-amber-500"
+                title={service.subscriptionNote ?? "Paid plan required"}
+              >
+                <DollarSign className="h-3 w-3" />
+                {service.subscriptionNote ?? "Paid plan required"}
+              </div>
+            )}
           </div>
           <p className="text-sm text-muted-foreground">
             {service.shortDescription}
           </p>
+          {service.requiresSubscription && (
+            <p className="text-xs text-amber-600/80">
+              Paid plan needed to actually use this service on your VPS.
+            </p>
+          )}
           <p className="text-xs text-muted-foreground/80">
             {service.whyNeeded}
           </p>

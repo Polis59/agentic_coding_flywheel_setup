@@ -37,6 +37,12 @@ export interface Service {
   /** One-line description */
   shortDescription: string;
 
+  /** Whether this service requires a paid subscription to be usable */
+  requiresSubscription?: boolean;
+
+  /** Short note shown as a badge (e.g., "Requires Claude Pro ($20/mo)") */
+  subscriptionNote?: string;
+
   /** Why this service matters for vibe coding */
   whyNeeded: string;
 
@@ -95,6 +101,8 @@ export const SERVICES: Service[] = [
     tier: 'essential',
     sortOrder: 2,
     shortDescription: 'Primary AI coding agent',
+    requiresSubscription: true,
+    subscriptionNote: 'Requires Claude Pro ($20/mo)',
     whyNeeded: 'Claude Code is your main AI pair programmer. Understands context, writes code, explains concepts.',
     signupUrl: 'https://claude.ai/',
     supportsGoogleSso: true,
@@ -113,6 +121,8 @@ export const SERVICES: Service[] = [
     tier: 'recommended',
     sortOrder: 1,
     shortDescription: 'OpenAI coding agent (requires ChatGPT Pro)',
+    requiresSubscription: true,
+    subscriptionNote: 'Requires ChatGPT Pro ($20/mo)',
     whyNeeded: 'Secondary AI agent. Different model = different perspectives. Requires ChatGPT Pro subscription.',
     signupUrl: 'https://chat.openai.com/',
     supportsGoogleSso: true,

@@ -530,6 +530,77 @@ export default function LaunchOnboardingPage() {
         </div>
       </div>
 
+      {/* Manual editing escape hatch */}
+      <Card className="border-border/50 bg-card/50 p-4 backdrop-blur-sm">
+        <details className="group">
+          <summary className="cursor-pointer font-semibold text-foreground hover:text-primary transition-colors">
+            How to edit files manually (when AI gets something wrong)
+          </summary>
+          <div className="mt-4 space-y-6 pl-4 border-l-2 border-primary/20">
+            <div>
+              <h3 className="font-medium">Quick edits with nano</h3>
+              <p className="mt-2 text-sm text-muted-foreground">
+                For simple fixes, nano is already installed on your VPS:
+              </p>
+              <CommandCard command="nano hello.py" description="Open a file in nano" />
+              <p className="mt-3 text-sm text-muted-foreground">Nano shortcuts:</p>
+              <ul className="mt-2 list-disc list-inside space-y-1 text-sm text-muted-foreground">
+                <li>
+                  <kbd className="rounded bg-muted px-1 py-0.5 font-mono text-xs">Ctrl</kbd> +{" "}
+                  <kbd className="rounded bg-muted px-1 py-0.5 font-mono text-xs">O</kbd>, then{" "}
+                  <kbd className="rounded bg-muted px-1 py-0.5 font-mono text-xs">Enter</kbd> — Save
+                </li>
+                <li>
+                  <kbd className="rounded bg-muted px-1 py-0.5 font-mono text-xs">Ctrl</kbd> +{" "}
+                  <kbd className="rounded bg-muted px-1 py-0.5 font-mono text-xs">X</kbd> — Exit
+                </li>
+                <li>
+                  <kbd className="rounded bg-muted px-1 py-0.5 font-mono text-xs">Ctrl</kbd> +{" "}
+                  <kbd className="rounded bg-muted px-1 py-0.5 font-mono text-xs">W</kbd> — Search
+                </li>
+              </ul>
+            </div>
+
+            <div>
+              <h3 className="font-medium">Full IDE with Cursor (recommended)</h3>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Cursor is an AI-native code editor with great remote editing support (like VS Code Remote SSH).
+              </p>
+              <ol className="mt-2 list-decimal list-inside space-y-1 text-sm text-muted-foreground">
+                <li>
+                  Download Cursor from{" "}
+                  <a
+                    href="https://cursor.com"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 font-medium text-primary hover:underline"
+                  >
+                    cursor.com
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
+                </li>
+                <li>
+                  Open the command palette:{" "}
+                  <kbd className="rounded bg-muted px-1 py-0.5 font-mono text-xs">Cmd</kbd>/
+                  <kbd className="rounded bg-muted px-1 py-0.5 font-mono text-xs">Ctrl</kbd> +{" "}
+                  <kbd className="rounded bg-muted px-1 py-0.5 font-mono text-xs">Shift</kbd> +{" "}
+                  <kbd className="rounded bg-muted px-1 py-0.5 font-mono text-xs">P</kbd>
+                </li>
+                <li>Search: <span className="font-mono">Remote-SSH: Connect to Host</span></li>
+                <li>
+                  Connect to <span className="font-mono">ubuntu@{displayIP}</span> (it will use your SSH key)
+                </li>
+              </ol>
+              <GuideTip className="mt-4">
+                Cursor is built on VS Code, so extensions work the same way — including Remote SSH.
+                You get a full IDE experience (syntax highlighting, file explorer, extensions) while editing files
+                directly on your VPS.
+              </GuideTip>
+            </div>
+          </div>
+        </details>
+      </Card>
+
       {/* Resources */}
       <Card className="p-4">
         <div className="flex items-start gap-3">
