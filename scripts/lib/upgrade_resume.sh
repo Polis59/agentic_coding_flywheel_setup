@@ -76,6 +76,40 @@ fi
 # Set state file location for resume context
 export ACFS_STATE_FILE="${ACFS_RESUME_DIR}/state.json"
 
+# Check current stage in state
+current_stage=""
+if [[ -f "$ACFS_STATE_FILE" ]] && command -v jq &>/dev/null; then
+    current_stage=$(jq -r '.ubuntu_upgrade.stage // "unknown"' "$ACFS_STATE_FILE" 2>/dev/null) || current_stage="unknown"
+fi
+log "Current stage: $current_stage"
+
+# Handle pre_upgrade_reboot stage specially
+# This happens when we rebooted to clear pending kernel updates BEFORE starting
+# the actual Ubuntu version upgrade. In this case, we just need to relaunch
+# the installer to continue with the actual upgrade.
+if [[ "$current_stage" == "pre_upgrade_reboot" ]]; then
+    log "Pre-upgrade reboot completed. Relaunching installer to continue..."
+
+    # Update MOTD
+    upgrade_update_motd "Pre-upgrade reboot complete. Starting Ubuntu upgrade..." 2>/dev/null || true
+
+    # Launch the continue script to resume the installer
+    if [[ -f "${ACFS_RESUME_DIR}/continue_install.sh" ]]; then
+        log "Launching continue_install.sh to resume installation"
+
+        # Execute the continue script
+        # Use nohup to survive this script exiting
+        nohup bash "${ACFS_RESUME_DIR}/continue_install.sh" >> "$ACFS_LOG" 2>&1 &
+
+        log "Installation continuation launched (PID: $!)"
+        log "=== Pre-Upgrade Reboot Resume Complete ==="
+        exit 0
+    else
+        log_error "No continue_install.sh found"
+        exit 1
+    fi
+fi
+
 # Ensure non-LTS upgrades are permitted (LTS defaults to Prompt=lts).
 ubuntu_enable_normal_releases || true
 

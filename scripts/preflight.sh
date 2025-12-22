@@ -266,7 +266,8 @@ check_network_installers() {
     local failed_urls=()
 
     for entry in "${urls[@]}"; do
-        local url="${entry%%:*}"
+        # Use single % to remove shortest match from end (preserves https://)
+        local url="${entry%:*}"
         local name="${entry##*:}"
 
         # Simple check: follow redirects, get HTTP status, 15s timeout
