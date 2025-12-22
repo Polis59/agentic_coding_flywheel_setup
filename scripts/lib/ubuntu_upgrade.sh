@@ -189,8 +189,12 @@ ubuntu_get_next_upgrade() {
 
     # Parse output for version info
     # Output looks like: "New release '24.10' available."
-    if echo "$output" | grep -qE "New release '[0-9]+\.[0-9]+' available"; then
-        echo "$output" | grep -oE "[0-9]+\.[0-9]+" | head -1
+    # Use -o to only output the matching part, then extract version
+    local release_line
+    release_line=$(echo "$output" | grep -oE "New release '[0-9]+\.[0-9]+' available" | head -n 1)
+    
+    if [[ -n "$release_line" ]]; then
+        echo "$release_line" | grep -oE "[0-9]+\.[0-9]+" | head -n 1
         return 0
     fi
 
@@ -282,37 +286,37 @@ ubuntu_preflight_checks() {
 
     # Check running as root
     if ! ubuntu_check_root; then
-        ((failed++))
+        ((failed += 1))
     fi
 
     # Check not in Docker
     if ! ubuntu_check_not_docker; then
-        ((failed++))
+        ((failed += 1))
     fi
 
     # Check not in WSL
     if ! ubuntu_check_not_wsl; then
-        ((failed++))
+        ((failed += 1))
     fi
 
     # Check disk space
     if ! ubuntu_check_disk_space; then
-        ((failed++))
+        ((failed += 1))
     fi
 
     # Check network connectivity
     if ! ubuntu_check_network; then
-        ((failed++))
+        ((failed += 1))
     fi
 
     # Check apt state
     if ! ubuntu_check_apt_state; then
-        ((failed++))
+        ((failed += 1))
     fi
 
     # Check if reboot is required (critical - do-release-upgrade will fail)
     if ! ubuntu_check_reboot_required; then
-        ((failed++))
+        ((failed += 1))
     fi
 
     # Check for recent boot (warning only, no failure)

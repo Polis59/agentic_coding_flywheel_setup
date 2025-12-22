@@ -129,8 +129,8 @@ cheatsheet_parse_zshrc() {
     if [[ "${#if_parent_active[@]}" -gt 0 && "$line" =~ ^[[:space:]]*elif[[:space:]]+command[[:space:]]+-v[[:space:]]+([[:alnum:]_.+-]+) ]]; then
       local tool="${BASH_REMATCH[1]}"
       local idx=$(( ${#if_parent_active[@]} - 1 ))
-      local parent_active="${if_parent_active[$idx]}"
-      local already_taken="${if_branch_taken[$idx]}"
+      local parent_active="${if_parent_active[idx]}"
+      local already_taken="${if_branch_taken[idx]}"
 
       if [[ "$already_taken" == "true" ]]; then
         overall_active=false
@@ -139,7 +139,7 @@ cheatsheet_parse_zshrc() {
 
       local cond=false
       command -v "$tool" &>/dev/null && cond=true
-      if_branch_taken[$idx]="$cond"
+      if_branch_taken[idx]="$cond"
 
       if [[ "$parent_active" == "true" && "$cond" == "true" ]]; then
         overall_active=true
@@ -151,23 +151,23 @@ cheatsheet_parse_zshrc() {
 
     if [[ "${#if_parent_active[@]}" -gt 0 && "$line" =~ ^[[:space:]]*else([[:space:]]*#.*)?$ ]]; then
       local idx=$(( ${#if_parent_active[@]} - 1 ))
-      local parent_active="${if_parent_active[$idx]}"
-      local already_taken="${if_branch_taken[$idx]}"
+      local parent_active="${if_parent_active[idx]}"
+      local already_taken="${if_branch_taken[idx]}"
 
       if [[ "$parent_active" == "true" && "$already_taken" != "true" ]]; then
         overall_active=true
       else
         overall_active=false
       fi
-      if_branch_taken[$idx]=true
+      if_branch_taken[idx]=true
       continue
     fi
 
     if [[ "${#if_parent_active[@]}" -gt 0 && "$line" =~ ^[[:space:]]*fi([[:space:]]*#.*)?$ ]]; then
       local idx=$(( ${#if_parent_active[@]} - 1 ))
-      overall_active="${if_parent_active[$idx]}"
-      unset 'if_parent_active[$idx]'
-      unset 'if_branch_taken[$idx]'
+      overall_active="${if_parent_active[idx]}"
+      unset 'if_parent_active[idx]'
+      unset 'if_branch_taken[idx]'
       continue
     fi
 
