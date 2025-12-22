@@ -611,7 +611,7 @@ modules:
     verified_installer:
       tool: mcp_agent_mail
       runner: bash
-      args: ["--yes"]
+      args: ["--dir", "/home/ubuntu/mcp_agent_mail", "--yes"]
     install: []
     verify:
       - command -v am
