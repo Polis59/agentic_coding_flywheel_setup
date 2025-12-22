@@ -45,14 +45,14 @@ export default function ReconnectUbuntuPage() {
     markComplete();
     markStepComplete(10);
     setIsNavigating(true);
-    router.push(withCurrentSearch("/wizard/status-check"));
+    router.push(withCurrentSearch("/wizard/verify-key-connection"));
   }, [router, markComplete]);
 
   const handleSkip = useCallback(() => {
     markComplete({ skipped: true });
     markStepComplete(10);
     setIsNavigating(true);
-    router.push(withCurrentSearch("/wizard/status-check"));
+    router.push(withCurrentSearch("/wizard/verify-key-connection"));
   }, [router, markComplete]);
 
   if (!ready || !vpsIP) {

@@ -24,6 +24,20 @@ export function getModuleCategory(moduleId: string): ModuleCategory {
 }
 
 /**
+ * Resolve the category for a module, prioritizing the explicit 'category' field.
+ * Falls back to ID-derived category if not specified.
+ *
+ * @param module - The module to resolve
+ * @returns The resolved category
+ */
+export function resolveModuleCategory(module: Module): ModuleCategory {
+  if (module.category) {
+    return module.category as ModuleCategory;
+  }
+  return getModuleCategory(module.id);
+}
+
+/**
  * Get all modules in a specific category
  *
  * @param manifest - The manifest object
@@ -36,7 +50,7 @@ export function getModuleCategory(moduleId: string): ModuleCategory {
  * ```
  */
 export function getModulesByCategory(manifest: Manifest, category: ModuleCategory): Module[] {
-  return manifest.modules.filter((module) => getModuleCategory(module.id) === category);
+  return manifest.modules.filter((module) => resolveModuleCategory(module) === category);
 }
 
 /**
@@ -121,7 +135,7 @@ export function getDependents(manifest: Manifest, moduleId: string): Module[] {
 export function getCategories(manifest: Manifest): ModuleCategory[] {
   const categories = new Set<ModuleCategory>();
   for (const module of manifest.modules) {
-    categories.add(getModuleCategory(module.id));
+    categories.add(resolveModuleCategory(module));
   }
   return Array.from(categories);
 }
@@ -184,7 +198,7 @@ export function groupModulesByCategory(manifest: Manifest): Map<ModuleCategory, 
   const groups = new Map<ModuleCategory, Module[]>();
 
   for (const module of manifest.modules) {
-    const category = getModuleCategory(module.id);
+    const category = resolveModuleCategory(module);
     const existing = groups.get(category) || [];
     existing.push(module);
     groups.set(category, existing);

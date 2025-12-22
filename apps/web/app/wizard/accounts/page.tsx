@@ -71,6 +71,10 @@ const TIER_META: Record<
   },
 };
 
+function sortByOrder(a: Service, b: Service) {
+  return a.sortOrder - b.sortOrder;
+}
+
 interface ServiceCardProps {
   service: Service;
   isChecked: boolean;
@@ -167,6 +171,73 @@ function ServiceCard({ service, isChecked, onToggle }: ServiceCardProps) {
   );
 }
 
+interface TierSectionProps {
+  tier: ServiceTier;
+  services: Service[];
+  checkedServices: Set<string>;
+  onToggleService: (serviceId: string) => void;
+}
+
+function TierSection({
+  tier,
+  services,
+  checkedServices,
+  onToggleService,
+}: TierSectionProps) {
+  const [isOpen, setIsOpen] = useState(TIER_META[tier].defaultOpen);
+  const checkedCount = services.filter((service) =>
+    checkedServices.has(service.id)
+  ).length;
+  const meta = TIER_META[tier];
+
+  if (services.length === 0) return null;
+
+  return (
+    <div className="overflow-hidden rounded-2xl border border-border/50 bg-card/50">
+      <button
+        type="button"
+        onClick={() => setIsOpen((prev) => !prev)}
+        className="flex w-full items-center justify-between gap-4 p-5 text-left transition-colors hover:bg-muted/30"
+        aria-expanded={isOpen}
+      >
+        <div className="flex items-center gap-3">
+          <div
+            className={`flex h-10 w-10 items-center justify-center rounded-xl ${meta.accentClass}`}
+          >
+            {meta.icon}
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h2 className="text-lg font-semibold">{meta.title}</h2>
+              <span className="text-xs text-muted-foreground">
+                {checkedCount}/{services.length}
+              </span>
+            </div>
+            <p className="text-sm text-muted-foreground">{meta.description}</p>
+          </div>
+        </div>
+        <ChevronDown
+          className={`h-4 w-4 text-muted-foreground transition-transform ${
+            isOpen ? "rotate-180" : ""
+          }`}
+        />
+      </button>
+      {isOpen && (
+        <div className="space-y-3 border-t border-border/40 p-4">
+          {services.map((service) => (
+            <ServiceCard
+              key={service.id}
+              service={service}
+              isChecked={checkedServices.has(service.id)}
+              onToggle={() => onToggleService(service.id)}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function AccountsPage() {
   const router = useRouter();
   const [isNavigating, setIsNavigating] = useState(false);
@@ -210,11 +281,13 @@ export default function AccountsPage() {
     router.push(withCurrentSearch("/wizard/preflight-check"));
   }, [router, markComplete]);
 
-  const tierGroups = groupByTier();
-  const tierOrder: ServiceTier[] = ["essential", "recommended", "optional"];
+  const tieredServices: Record<ServiceTier, Service[]> = {
+    essential: getServicesByTier("essential").sort(sortByOrder),
+    recommended: getServicesByTier("recommended").sort(sortByOrder),
+    optional: getServicesByTier("optional").sort(sortByOrder),
+  };
 
-  // Count essential services that are checked
-  const essentialServices = tierGroups.essential;
+  const essentialServices = tieredServices.essential;
   const essentialChecked = essentialServices.filter((s) =>
     checkedServices.has(s.id)
   );
@@ -272,70 +345,17 @@ export default function AccountsPage() {
       </div>
 
       {/* Service tiers */}
-      {tierOrder.map((tier) => {
-        const services = tierGroups[tier];
-        if (services.length === 0) return null;
-
-        const isEssential = tier === "essential";
-        const tierLabel = TIER_NAMES[tier];
-        const tierDesc = TIER_DESCRIPTIONS[tier];
-
-        // Essential tier is always expanded, others are collapsible
-        if (isEssential) {
-          return (
-            <div key={tier} className="space-y-4">
-              <div className="flex items-center gap-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[oklch(0.72_0.19_145/0.2)] text-[oklch(0.72_0.19_145)]">
-                  {TIER_ICONS[tier]}
-                </div>
-                <div>
-                  <h2 className="text-lg font-semibold">{tierLabel}</h2>
-                  <p className="text-sm text-muted-foreground">{tierDesc}</p>
-                </div>
-              </div>
-              <div className="space-y-3">
-                {services.map((service) => (
-                  <ServiceCard
-                    key={service.id}
-                    service={service}
-                    isChecked={checkedServices.has(service.id)}
-                    onToggle={() => handleToggle(service.id)}
-                  />
-                ))}
-              </div>
-            </div>
-          );
-        }
-
-        // Recommended and Optional are collapsible
-        return (
-          <details key={tier} className="group">
-            <summary className="flex cursor-pointer items-center gap-2 rounded-lg border border-border/50 bg-card/30 p-3 transition-colors hover:bg-card/50 [&::-webkit-details-marker]:hidden">
-              <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" />
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                {TIER_ICONS[tier]}
-              </div>
-              <div className="flex-1">
-                <h2 className="text-base font-semibold">{tierLabel}</h2>
-                <p className="text-sm text-muted-foreground">{tierDesc}</p>
-              </div>
-              <span className="text-sm text-muted-foreground">
-                {services.filter((s) => checkedServices.has(s.id)).length} / {services.length}
-              </span>
-            </summary>
-            <div className="mt-4 space-y-3 pl-6">
-              {services.map((service) => (
-                <ServiceCard
-                  key={service.id}
-                  service={service}
-                  isChecked={checkedServices.has(service.id)}
-                  onToggle={() => handleToggle(service.id)}
-                />
-              ))}
-            </div>
-          </details>
-        );
-      })}
+      <div className="space-y-4">
+        {(["essential", "recommended", "optional"] as ServiceTier[]).map((tier) => (
+          <TierSection
+            key={tier}
+            tier={tier}
+            services={tieredServices[tier]}
+            checkedServices={checkedServices}
+            onToggleService={handleToggle}
+          />
+        ))}
+      </div>
 
       {/* Beginner Guide */}
       <SimplerGuide>
@@ -368,9 +388,9 @@ export default function AccountsPage() {
                 helps you track your progress.
               </GuideStep>
 
-              <GuideStep number={3} title="Focus on 'Strongly Recommended' first">
-                The green-labeled services are most important. You can skip
-                &quot;Optional&quot; ones for now.
+              <GuideStep number={3} title="Focus on the Essential tier first">
+                Knock out the two essential accounts. You can leave recommended
+                and optional services for later.
               </GuideStep>
 
               <GuideStep number={4} title="You can come back later">

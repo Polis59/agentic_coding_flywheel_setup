@@ -60,7 +60,7 @@ modules:
   # ============================================================
   - id: base.filesystem
     description: Create workspace and ACFS directories
-    category: base
+    category: filesystem
     phase: 3
     run_as: root
     optional: false

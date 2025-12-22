@@ -84,12 +84,18 @@ export const WIZARD_STEPS: WizardStep[] = [
   },
   {
     id: 11,
+    title: "Verify Key Connection",
+    description: "Reconnect using your SSH key and confirm it works",
+    slug: "verify-key-connection",
+  },
+  {
+    id: 12,
     title: "Status Check",
     description: "Verify everything installed correctly",
     slug: "status-check",
   },
   {
-    id: 12,
+    id: 13,
     title: "Launch Onboarding",
     description: "Start the interactive tutorial",
     slug: "launch-onboarding",

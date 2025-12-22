@@ -104,6 +104,7 @@ export type WizardStep =
   | 'ssh_connect'
   | 'accounts'
   | 'preflight_check'
+  | 'verify_key_connection'
   | 'reconnect_ubuntu'
   | 'run_installer'
   | 'status_check'

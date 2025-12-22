@@ -54,7 +54,7 @@ acfs_security_init() {
 }
 
 # Category: base
-# Modules: 2
+# Modules: 1
 
 # Base packages + sane defaults
 install_base_system() {
@@ -123,67 +123,10 @@ INSTALL_BASE_SYSTEM
     log_success "base.system installed"
 }
 
-# Create workspace and ACFS directories
-install_base_filesystem() {
-    local module_id="base.filesystem"
-    acfs_require_contract "module:${module_id}" || return 1
-    log_step "Installing base.filesystem"
-
-    if [[ "${DRY_RUN:-false}" == "true" ]]; then
-        log_info "dry-run: install: mkdir -p /data/projects /data/cache (root)"
-    else
-        if ! run_as_root_shell <<'INSTALL_BASE_FILESYSTEM'
-mkdir -p /data/projects /data/cache
-INSTALL_BASE_FILESYSTEM
-        then
-            log_error "base.filesystem: install command failed: mkdir -p /data/projects /data/cache"
-            return 1
-        fi
-    fi
-    if [[ "${DRY_RUN:-false}" == "true" ]]; then
-        log_info "dry-run: install: chown -R ubuntu:ubuntu /data (root)"
-    else
-        if ! run_as_root_shell <<'INSTALL_BASE_FILESYSTEM'
-chown -R ubuntu:ubuntu /data
-INSTALL_BASE_FILESYSTEM
-        then
-            log_error "base.filesystem: install command failed: chown -R ubuntu:ubuntu /data"
-            return 1
-        fi
-    fi
-
-    # Verify
-    if [[ "${DRY_RUN:-false}" == "true" ]]; then
-        log_info "dry-run: verify: test -d /data/projects (root)"
-    else
-        if ! run_as_root_shell <<'INSTALL_BASE_FILESYSTEM'
-test -d /data/projects
-INSTALL_BASE_FILESYSTEM
-        then
-            log_error "base.filesystem: verify failed: test -d /data/projects"
-            return 1
-        fi
-    fi
-    if [[ "${DRY_RUN:-false}" == "true" ]]; then
-        log_info "dry-run: verify: test -d ~/.acfs (root)"
-    else
-        if ! run_as_root_shell <<'INSTALL_BASE_FILESYSTEM'
-test -d ~/.acfs
-INSTALL_BASE_FILESYSTEM
-        then
-            log_error "base.filesystem: verify failed: test -d ~/.acfs"
-            return 1
-        fi
-    fi
-
-    log_success "base.filesystem installed"
-}
-
 # Install all base modules
 install_base() {
     log_section "Installing base modules"
     install_base_system
-    install_base_filesystem
 }
 
 # Run if executed directly

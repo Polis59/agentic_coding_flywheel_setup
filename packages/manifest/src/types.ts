@@ -145,6 +145,7 @@ export interface ValidationWarning {
 export type ModuleCategory =
   | 'base'
   | 'users'
+  | 'filesystem'
   | 'shell'
   | 'cli'
   | 'lang'

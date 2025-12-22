@@ -6,7 +6,7 @@
 # ============================================================
 # Data-only manifest index. Safe to source.
 
-ACFS_MANIFEST_SHA256="3f75c54095a30db27deb8183cf0da019b18d5c5fe9136c0fc9314db603e97f64"
+ACFS_MANIFEST_SHA256="d877fc44fde421e57d87b85a59ad74b1fd74467d1937426ddde09981ea45fb72"
 
 ACFS_MODULES_IN_ORDER=(
   "base.system"
@@ -147,7 +147,7 @@ declare -gA ACFS_MODULE_FUNC=(
 declare -gA ACFS_MODULE_CATEGORY=(
   ["base.system"]="base"
   ["users.ubuntu"]="users"
-  ["base.filesystem"]="base"
+  ["base.filesystem"]="filesystem"
   ["shell.zsh"]="shell"
   ["cli.modern"]="cli"
   ["network.tailscale"]="network"

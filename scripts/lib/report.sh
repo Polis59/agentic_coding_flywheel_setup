@@ -333,6 +333,7 @@ EOF
 report_success() {
     local phase_count="${1:-9}"
     local total_time="${2:-0}"
+    local total_phases=""
 
     # Format time
     local time_str
@@ -348,6 +349,13 @@ report_success() {
         time_str="unknown"
     fi
 
+    if declare -p ACFS_PHASE_IDS >/dev/null 2>&1; then
+        total_phases="${#ACFS_PHASE_IDS[@]}"
+    fi
+    if [[ -z "$total_phases" ]]; then
+        total_phases="$phase_count"
+    fi
+
     echo ""
     if command -v gum &>/dev/null; then
         gum style \
@@ -359,24 +367,30 @@ report_success() {
             --margin "1 0" \
             "  INSTALLATION COMPLETE!" \
             "" \
-            "  ${phase_count} phases completed in ${time_str}" \
+            "  Total time: ${time_str}" \
+            "  Phases installed: ${phase_count}/${total_phases}" \
             "" \
             "  Next steps:" \
-            "    1. Log out and back in (or: source ~/.zshrc)" \
+            "    1. Log out and back in (or run: source ~/.zshrc)" \
             "    2. Run: onboard" \
-            "    3. Start coding with: cc, cod, or gmi"
+            "    3. Start coding with: cc, cod, or gmi" \
+            "" \
+            "  Logs: ${ACFS_LOG_FILE}"
     else
         echo -e "${REPORT_GREEN}${REPORT_BOLD}"
         echo "================================================================"
         echo "  INSTALLATION COMPLETE!"
         echo "================================================================${REPORT_NC}"
         echo ""
-        echo "  ${phase_count} phases completed in ${time_str}"
+        echo "  Total time: ${time_str}"
+        echo "  Phases installed: ${phase_count}/${total_phases}"
         echo ""
         echo "  Next steps:"
-        echo "    1. Log out and back in (or: source ~/.zshrc)"
+        echo "    1. Log out and back in (or run: source ~/.zshrc)"
         echo "    2. Run: onboard"
         echo "    3. Start coding with: cc, cod, or gmi"
+        echo ""
+        echo "  Logs: ${ACFS_LOG_FILE}"
         echo ""
         echo -e "${REPORT_GREEN}================================================================${REPORT_NC}"
     fi
@@ -417,11 +431,13 @@ report_warning() {
         if [[ -n "$details" ]]; then
             gum style --faint "  ${details}"
         fi
+        gum style --faint "  Installer will continue. Re-run with --resume to retry failed steps."
     else
         echo -e "${REPORT_YELLOW}${REPORT_BOLD}Warning:${REPORT_NC} ${message}"
         if [[ -n "$details" ]]; then
             echo -e "  ${REPORT_GRAY}${details}${REPORT_NC}"
         fi
+        echo -e "  ${REPORT_GRAY}Installer will continue. Re-run with --resume to retry failed steps.${REPORT_NC}"
     fi
 }
 
