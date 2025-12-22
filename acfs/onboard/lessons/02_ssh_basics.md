@@ -34,7 +34,7 @@ ssh -i ~/.ssh/acfs_ed25519 ubuntu@YOUR_SERVER_IP
 
 Breaking it down:
 - `ssh` - the command
-- `-i ~/.ssh/acfs_ed25519` - your private key (the installer set this up)
+- `-i ~/.ssh/acfs_ed25519` - your private key (you created this on your laptop)
 - `ubuntu` - your regular user account (safer than root)
 - `@YOUR_SERVER_IP` - the server address
 
@@ -57,7 +57,7 @@ You're now using **key-based authentication**:
 
 This is more secure than passwords and lets you connect without typing anything.
 
-**Why we started with a password:** VPS providers give you root access with a password. The installer then sets up key-based login and disables password access for better security.
+**Why we started with a password:** VPS providers give you root access with a password. The installer then sets up key-based login, which is faster and more secure than typing passwords.
 
 ---
 
