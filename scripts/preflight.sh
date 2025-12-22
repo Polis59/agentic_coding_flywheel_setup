@@ -254,7 +254,8 @@ check_network_installers() {
     fi
 
     # Test key installer URLs (warnings, not failures)
-    # Use -L to follow redirects, -I for HEAD request (faster)
+    # Use GET with range request and longer timeout for VPS compatibility
+    # Some servers don't support HEAD or have slow first-byte times
     local urls=(
         "https://bun.sh/install:Bun installer"
         "https://astral.sh/uv/install.sh:UV/Python installer"
@@ -269,9 +270,14 @@ check_network_installers() {
         local url="${entry%%:*}"
         local name="${entry##*:}"
 
-        if ! curl -sfLI --max-time 5 "$url" > /dev/null 2>&1; then
-            all_ok=false
-            failed_urls+=("$name")
+        # Use GET with output to /dev/null; -L follows redirects; longer timeout for slow VPS
+        # Range header fetches only first byte (fast); fallback to full GET if range not supported
+        if ! curl -sfL --max-time 10 --connect-timeout 5 -r 0-0 "$url" -o /dev/null 2>&1; then
+            # Retry without range header in case server doesn't support it
+            if ! curl -sfL --max-time 10 --connect-timeout 5 "$url" -o /dev/null 2>&1; then
+                all_ok=false
+                failed_urls+=("$name")
+            fi
         fi
     done
 

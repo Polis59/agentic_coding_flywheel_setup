@@ -41,6 +41,7 @@ ACFS_REPO_OWNER="Dicklesworthstone"
 ACFS_REPO_NAME="agentic_coding_flywheel_setup"
 ACFS_REF="${ACFS_REF:-main}"
 ACFS_RAW="https://raw.githubusercontent.com/${ACFS_REPO_OWNER}/${ACFS_REPO_NAME}/${ACFS_REF}"
+ACFS_COMMIT_SHA=""  # Will be fetched from GitHub API
 # Note: ACFS_HOME is set after TARGET_HOME is determined
 ACFS_LOG_DIR="/var/log/acfs"
 # SCRIPT_DIR is empty when running via curl|bash (stdin; no file on disk)
@@ -266,6 +267,77 @@ ACFS_ERROR="#f38ba8"
 ACFS_MUTED="#6c7086"
 
 # ============================================================
+# Fetch commit SHA and date from GitHub API
+# This ensures we always know exactly which version is running
+# ============================================================
+ACFS_COMMIT_DATE=""
+ACFS_COMMIT_AGE=""
+
+fetch_commit_sha() {
+    # Already have it? Skip
+    if [[ -n "$ACFS_COMMIT_SHA" && "$ACFS_COMMIT_SHA" != "(unknown)" ]]; then
+        return 0
+    fi
+
+    # Need curl
+    if ! command -v curl &>/dev/null; then
+        ACFS_COMMIT_SHA="(curl not available)"
+        return 0
+    fi
+
+    # Fetch from GitHub API - get the commit SHA for the ref
+    local api_url="https://api.github.com/repos/${ACFS_REPO_OWNER}/${ACFS_REPO_NAME}/commits/${ACFS_REF}"
+    local response
+
+    if response=$(curl -sf --max-time 5 "$api_url" 2>/dev/null); then
+        # Extract SHA from JSON using grep/sed (works without jq)
+        local sha
+        sha=$(echo "$response" | grep -m1 '"sha"' | sed 's/.*"sha"[[:space:]]*:[[:space:]]*"\([a-f0-9]*\)".*/\1/' | head -c 12)
+        if [[ -n "$sha" && ${#sha} -ge 7 ]]; then
+            ACFS_COMMIT_SHA="$sha"
+        fi
+
+        # Extract commit date (format: "2025-12-21T10:30:00Z")
+        local commit_date
+        commit_date=$(echo "$response" | grep -m1 '"date"' | head -1 | sed 's/.*"date"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')
+        if [[ -n "$commit_date" ]]; then
+            ACFS_COMMIT_DATE="$commit_date"
+            # Calculate age
+            local now commit_ts age_seconds
+            now=$(date +%s 2>/dev/null || echo 0)
+            # Parse ISO 8601 date - handle both GNU and BSD date
+            if date -d "$commit_date" +%s &>/dev/null; then
+                # GNU date
+                commit_ts=$(date -d "$commit_date" +%s 2>/dev/null || echo 0)
+            else
+                # BSD date - try simpler parsing
+                commit_ts=$(date -j -f "%Y-%m-%dT%H:%M:%SZ" "$commit_date" +%s 2>/dev/null || echo 0)
+            fi
+
+            if [[ "$now" -gt 0 && "$commit_ts" -gt 0 ]]; then
+                age_seconds=$((now - commit_ts))
+                if [[ $age_seconds -lt 60 ]]; then
+                    ACFS_COMMIT_AGE="${age_seconds}s ago"
+                elif [[ $age_seconds -lt 3600 ]]; then
+                    ACFS_COMMIT_AGE="$((age_seconds / 60))m ago"
+                elif [[ $age_seconds -lt 86400 ]]; then
+                    ACFS_COMMIT_AGE="$((age_seconds / 3600))h ago"
+                else
+                    ACFS_COMMIT_AGE="$((age_seconds / 86400))d ago"
+                fi
+            fi
+        fi
+
+        if [[ -n "$ACFS_COMMIT_SHA" ]]; then
+            return 0
+        fi
+    fi
+
+    # Fallback
+    ACFS_COMMIT_SHA="(unknown)"
+}
+
+# ============================================================
 # Install gum FIRST for beautiful UI from the start
 # ============================================================
 install_gum_early() {
@@ -350,6 +422,22 @@ print_banner() {
     local version_line
     version_line=$(printf "║%*s%s%*s║" "$padding" "" "$version_text" "$((63 - padding - ${#version_text}))" "")
 
+    # Build commit info line
+    local commit_text=""
+    if [[ -n "$ACFS_COMMIT_SHA" && "$ACFS_COMMIT_SHA" != "(unknown)" ]]; then
+        commit_text="Commit: ${ACFS_COMMIT_SHA}"
+        if [[ -n "$ACFS_COMMIT_AGE" ]]; then
+            commit_text="${commit_text} (${ACFS_COMMIT_AGE})"
+        fi
+    fi
+    local commit_padding=$(( (63 - ${#commit_text}) / 2 ))
+    local commit_line
+    if [[ -n "$commit_text" ]]; then
+        commit_line=$(printf "║%*s%s%*s║" "$commit_padding" "" "$commit_text" "$((63 - commit_padding - ${#commit_text}))" "")
+    else
+        commit_line="║                                                               ║"
+    fi
+
     local banner="
 ╔═══════════════════════════════════════════════════════════════╗
 ║                                                               ║
@@ -361,6 +449,7 @@ print_banner() {
 ║    ╚═╝  ╚═╝ ╚═════╝╚═╝     ╚══════╝                           ║
 ║                                                               ║
 ${version_line}
+${commit_line}
 ║                                                               ║
 ╚═══════════════════════════════════════════════════════════════╝
 "
@@ -1479,8 +1568,13 @@ run_ubuntu_upgrade_phase() {
             ;;
         error)
             log_error "Previous Ubuntu upgrade attempt failed (stage: error)"
-            log_error "Check logs: journalctl -u acfs-upgrade-resume -f or /var/log/acfs/upgrade_resume.log"
-            log_error "To proceed without upgrading: re-run with --skip-ubuntu-upgrade (not recommended)"
+            log_error "Check logs:"
+            log_info "  journalctl -u acfs-upgrade-resume"
+            log_info "  tail -100 /var/log/acfs/upgrade_resume.log"
+            log_error "To reset and retry upgrade:"
+            log_info "  sudo rm -f ${upgrade_state_file}"
+            log_error "To proceed without upgrading:"
+            log_info "  Re-run with --skip-ubuntu-upgrade (not recommended)"
             return 1
             ;;
     esac
@@ -2907,6 +3001,9 @@ main() {
 
     # Install gum FIRST so the entire script looks amazing
     install_gum_early
+
+    # Fetch commit SHA for version display
+    fetch_commit_sha
 
     # Print beautiful ASCII banner (now with gum if available!)
     print_banner
