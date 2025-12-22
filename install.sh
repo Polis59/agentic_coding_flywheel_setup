@@ -1263,7 +1263,7 @@ run_as_target() {
     # - _ is $0 (script name placeholder)
     # - exec "$@" replaces sh with the target command, preserving stdin
     if command_exists sudo; then
-        # shellcheck disable=SC2086  # Intentional word splitting for multiple env vars
+        # shellcheck disable=SC2086,SC2016  # Intentional word splitting; $HOME/$@ expand inside sh -c
         sudo -u "$user" env $env_vars sh -c 'cd "$HOME" 2>/dev/null; exec "$@"' _ "$@"
         return $?
     fi
@@ -1271,7 +1271,7 @@ run_as_target() {
     # Fallbacks (root-only typically)
     # Note: Avoid -l flag to prevent sourcing profiles
     if command_exists runuser; then
-        # shellcheck disable=SC2086  # Intentional word splitting for multiple env vars
+        # shellcheck disable=SC2086,SC2016  # Intentional word splitting; $HOME/$@ expand inside sh -c
         runuser -u "$user" -- env $env_vars sh -c 'cd "$HOME" 2>/dev/null; exec "$@"' _ "$@"
         return $?
     fi
