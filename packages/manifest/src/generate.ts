@@ -548,7 +548,7 @@ function generateInstallCommands(module: Module): string[] {
   // Process remaining install commands via heredocs
   for (const cmd of module.install) {
     // Check if it's a description (not an actual command)
-    if (cmd.startsWith('"') || cmd.match(/^[A-Z][a-z]/)) {
+    if (cmd.startsWith('"')) {
       lines.push(`    # ${cmd}`);
       lines.push(`    log_info "TODO: ${escapeBash(cmd)}"`);
     } else if (cmd.includes('\n') || cmd.startsWith('|')) {
