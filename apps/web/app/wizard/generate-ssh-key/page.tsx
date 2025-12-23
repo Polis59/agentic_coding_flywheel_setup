@@ -86,7 +86,7 @@ export default function GenerateSSHKeyPage() {
       </AlertCard>
 
       {/* ~/.ssh folder explanation */}
-      <AlertCard variant="default" title="Where are SSH keys stored?">
+      <AlertCard variant="tip" title="Where are SSH keys stored?">
         <p className="mb-2">
           SSH keys are stored in a special folder called <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">~/.ssh</code> on your computer.
         </p>
