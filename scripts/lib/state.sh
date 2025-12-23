@@ -747,7 +747,15 @@ state_handle_invalid() {
                 return 0
             fi
 
-            read -r -p "Start fresh? [Y/n] " response
+            local response=""
+            if [[ -t 0 ]]; then
+                read -r -p "Start fresh? [Y/n] " response
+            elif [[ -r /dev/tty ]]; then
+                read -r -p "Start fresh? [Y/n] " response < /dev/tty
+            else
+                echo "ERROR: --yes is required when no TTY is available" >&2
+                return 1
+            fi
             if [[ "$response" =~ ^[Nn] ]]; then
                 return 1
             fi
@@ -769,7 +777,15 @@ state_handle_invalid() {
                 return 0
             fi
 
-            read -r -p "Start fresh install? [Y/n] " response
+            local response=""
+            if [[ -t 0 ]]; then
+                read -r -p "Start fresh install? [Y/n] " response
+            elif [[ -r /dev/tty ]]; then
+                read -r -p "Start fresh install? [Y/n] " response < /dev/tty
+            else
+                echo "ERROR: --yes is required when no TTY is available" >&2
+                return 1
+            fi
             if [[ "$response" =~ ^[Nn] ]]; then
                 return 1
             fi
@@ -792,7 +808,15 @@ state_handle_invalid() {
                 return 0
             fi
 
-            read -r -p "Start fresh install? [Y/n] " response
+            local response=""
+            if [[ -t 0 ]]; then
+                read -r -p "Start fresh install? [Y/n] " response
+            elif [[ -r /dev/tty ]]; then
+                read -r -p "Start fresh install? [Y/n] " response < /dev/tty
+            else
+                echo "ERROR: --yes is required when no TTY is available" >&2
+                return 1
+            fi
             if [[ "$response" =~ ^[Nn] ]]; then
                 return 1
             fi
@@ -818,7 +842,15 @@ state_handle_invalid() {
                     return 0
                 fi
 
-                read -r -p "Migrate existing state? [Y/n] " response
+                local response=""
+                if [[ -t 0 ]]; then
+                    read -r -p "Migrate existing state? [Y/n] " response
+                elif [[ -r /dev/tty ]]; then
+                    read -r -p "Migrate existing state? [Y/n] " response < /dev/tty
+                else
+                    echo "ERROR: --yes is required when no TTY is available" >&2
+                    return 1
+                fi
                 if [[ "$response" =~ ^[Nn] ]]; then
                     state_backup_and_remove
                 else

@@ -1296,7 +1296,15 @@ ubuntu_confirm_upgrade() {
     echo "Have you taken a snapshot? (Recommended but not required)"
     echo ""
 
-    read -r -p "Proceed with Ubuntu upgrade? [y/N] " response
+    local response=""
+    if [[ -t 0 ]]; then
+        read -r -p "Proceed with Ubuntu upgrade? [y/N] " response
+    elif [[ -r /dev/tty ]]; then
+        read -r -p "Proceed with Ubuntu upgrade? [y/N] " response < /dev/tty
+    else
+        log_error "--yes is required when no TTY is available"
+        return 1
+    fi
     if [[ ! "$response" =~ ^[Yy] ]]; then
         log_warn "Upgrade cancelled by user"
         return 1

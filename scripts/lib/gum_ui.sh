@@ -171,13 +171,29 @@ gum_confirm() {
     local message="$1"
 
     if [[ "$HAS_GUM" == "true" ]]; then
-        gum confirm \
-            --affirmative "Yes" \
-            --negative "No" \
-            --prompt.foreground "$ACFS_PRIMARY" \
-            "$message"
+        if [[ -r /dev/tty ]]; then
+            gum confirm \
+                --affirmative "Yes" \
+                --negative "No" \
+                --prompt.foreground "$ACFS_PRIMARY" \
+                "$message" < /dev/tty > /dev/tty
+        else
+            gum confirm \
+                --affirmative "Yes" \
+                --negative "No" \
+                --prompt.foreground "$ACFS_PRIMARY" \
+                "$message"
+        fi
     else
-        read -r -p "$message [y/N] " response
+        local response=""
+        if [[ -t 0 ]]; then
+            read -r -p "$message [y/N] " response
+        elif [[ -r /dev/tty ]]; then
+            read -r -p "$message [y/N] " response < /dev/tty
+        else
+            echo "ERROR: --yes is required when no TTY is available" >&2
+            return 1
+        fi
         [[ "$response" =~ ^[Yy] ]]
     fi
 }
