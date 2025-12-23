@@ -448,29 +448,72 @@ print_current_checksums() {
 load_checksums() {
     local file="${1:-$CHECKSUMS_FILE}"
     local current_tool=""
+    local in_installers=false
+    local installers_indent=0
+    local tool_indent=""
 
     if [[ ! -r "$file" ]]; then
         echo -e "${YELLOW}Warning:${NC} Checksums file not found: $file" >&2
         return 1
     fi
 
-    # Simple YAML parsing for our specific format
-    # Extracts name and sha256 pairs
+    # Clear any previously loaded checksums (avoid stale entries if reloaded).
+    LOADED_CHECKSUMS=()
+
+    # Lightweight YAML parsing for our specific format:
+    #
+    # installers:
+    #   tool_name:
+    #     url: "https://..."
+    #     sha256: "0123...abcd"
+    #
+    # Rules:
+    # - Only read entries under the top-level "installers:" mapping.
+    # - Tool keys are detected as a mapping key with an empty value (e.g. "  bun:").
+    # - Accept SHA256 values with or without quotes, and allow uppercase hex.
     while IFS= read -r line || [[ -n "$line" ]]; do
+        line="${line%$'\r'}"
+
         # Skip comments and empty lines
         [[ "$line" =~ ^[[:space:]]*# ]] && continue
-        [[ -z "${line// }" ]] && continue
+        [[ -z "${line//[[:space:]]/}" ]] && continue
 
-        # Match tool name (2-space indent, ends with :)
-        if [[ "$line" =~ ^[[:space:]]{2}([a-z_]+): ]]; then
-            current_tool="${BASH_REMATCH[1]}"
+        local indent="${line%%[^ ]*}"
+        local indent_len="${#indent}"
+
+        if [[ "$in_installers" == "false" ]]; then
+            if [[ "$line" =~ ^[[:space:]]*installers:[[:space:]]*$ ]]; then
+                in_installers=true
+                installers_indent="$indent_len"
+                tool_indent=""
+                current_tool=""
+            fi
+            continue
         fi
 
-        # Match sha256 value
-        if [[ "$line" =~ sha256:[[:space:]]*\"?([a-f0-9]{64})\"? ]]; then
-            if [[ -n "$current_tool" ]]; then
-                LOADED_CHECKSUMS["$current_tool"]="${BASH_REMATCH[1]}"
+        # Stop parsing when leaving the installers section.
+        if (( indent_len <= installers_indent )); then
+            in_installers=false
+            tool_indent=""
+            current_tool=""
+            continue
+        fi
+
+        # Match tool name (a mapping key line like "  bun:")
+        if [[ "$line" =~ ^[[:space:]]*([A-Za-z0-9_-]+):[[:space:]]*$ ]]; then
+            if [[ -z "$tool_indent" ]]; then
+                tool_indent="$indent_len"
             fi
+
+            if (( indent_len == tool_indent )); then
+                current_tool="${BASH_REMATCH[1]}"
+                continue
+            fi
+        fi
+
+        # Match sha256 value for the current tool.
+        if [[ -n "$current_tool" ]] && [[ "$line" =~ sha256:[[:space:]]*['\"]?([0-9A-Fa-f]{64})['\"]? ]]; then
+            LOADED_CHECKSUMS["$current_tool"]="${BASH_REMATCH[1],,}"
         fi
     done < "$file"
 }
