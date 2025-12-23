@@ -360,7 +360,10 @@ state_save() {
     if command -v jq &>/dev/null; then
         local now
         now="$(date -Iseconds)"
-        content=$(echo "$content" | jq --arg ts "$now" '.last_updated = $ts')
+        if ! content=$(echo "$content" | jq --arg ts "$now" '.last_updated = $ts'); then
+            declare -f log_error &>/dev/null && log_error "state_save: failed to update last_updated timestamp"
+            return 1
+        fi
     fi
 
     state_write_atomic "$state_file" "$content"
@@ -444,7 +447,9 @@ state_step_update() {
     state=$(state_load) || return 1
 
     local new_state
-    new_state=$(echo "$state" | jq --arg step "$step" '.current_step = $step')
+    if ! new_state=$(echo "$state" | jq --arg step "$step" '.current_step = $step'); then
+        return 1
+    fi
 
     state_save "$new_state"
 }
@@ -469,13 +474,15 @@ state_phase_complete() {
 
         # Add phase to completed list, record duration, clear current
         local new_state
-        new_state=$(echo "$state" | jq --arg phase "$phase_id" --argjson dur "$duration" '
+        if ! new_state=$(echo "$state" | jq --arg phase "$phase_id" --argjson dur "$duration" '
             .completed_phases = ((.completed_phases // []) + [$phase] | unique) |
             .phase_durations[$phase] = $dur |
             .current_phase = null |
             .current_step = null |
             del(.phase_start_time)
-        ')
+        '); then
+            return 1
+        fi
 
         state_save "$new_state"
     fi
@@ -494,7 +501,7 @@ state_phase_fail() {
         state=$(state_load) || return 1
 
         local new_state
-        new_state=$(echo "$state" | jq \
+        if ! new_state=$(echo "$state" | jq \
             --arg phase "$phase_id" \
             --arg step "$step" \
             --arg err "$error" '
@@ -503,7 +510,9 @@ state_phase_fail() {
             .failed_error = $err |
             .current_phase = null |
             .current_step = null
-        ')
+        '); then
+            return 1
+        fi
 
         state_save "$new_state"
     fi
@@ -921,7 +930,7 @@ state_migrate_v1_to_v2() {
     if command -v jq &>/dev/null; then
         # Convert numeric array to string array
         local new_state
-        new_state=$(echo "$state" | jq '
+        if ! new_state=$(echo "$state" | jq '
             .schema_version = 2 |
             .completed_phases = (
                 .completed_phases // [] |
@@ -947,7 +956,9 @@ state_migrate_v1_to_v2() {
             .skipped_tools = [] |
             .skipped_phases = [] |
             .phase_durations = {}
-        ')
+        '); then
+            return 1
+        fi
 
         state_save "$new_state"
     else
@@ -1673,10 +1684,12 @@ state_upgrade_set_error() {
     state=$(state_load) || return 1
 
     local new_state
-    new_state=$(echo "$state" | jq --arg err "$error_msg" '
+    if ! new_state=$(echo "$state" | jq --arg err "$error_msg" '
         .ubuntu_upgrade.last_error = $err |
         .ubuntu_upgrade.current_stage = "error"
-    ')
+    '); then
+        return 1
+    fi
 
     state_save "$new_state"
 }

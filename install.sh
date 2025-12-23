@@ -70,6 +70,10 @@ SKIP_CLOUD=false
 # Manifest-driven selection options (mjt.5.3)
 LIST_MODULES=false
 PRINT_PLAN_MODE=false
+ONLY_MODULES=()
+ONLY_PHASES=()
+SKIP_MODULES=()
+NO_DEPS=false
 
 # Resume/reinstall options (used by state.sh confirm_resume)
 export ACFS_FORCE_RESUME=false
