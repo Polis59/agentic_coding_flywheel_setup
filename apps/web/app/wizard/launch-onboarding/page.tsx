@@ -166,13 +166,27 @@ export default function LaunchOnboardingPage() {
           <div className="space-y-3">
             <div className="flex gap-3">
               <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[oklch(0.78_0.16_75)] text-[oklch(0.15_0.02_75)] font-bold text-sm">1</div>
-              <div>
+              <div className="space-y-3">
                 <p className="font-medium">Claude Code</p>
                 <CommandCard
                   command="claude"
                   description="Follow the prompts. If it prints a URL, open it on your laptop to log in."
                   runLocation="vps"
                 />
+                {/* Detailed OAuth flow explanation */}
+                <div className="rounded-lg border border-[oklch(0.78_0.16_75/0.3)] bg-[oklch(0.78_0.16_75/0.05)] p-3 text-sm space-y-2">
+                  <p className="font-medium text-[oklch(0.78_0.16_75)]">How the authentication works:</p>
+                  <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
+                    <li>The terminal shows a URL like <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">https://claude.ai/oauth/...</code></li>
+                    <li><strong className="text-foreground">Copy that URL</strong> and paste it into your web browser (on your laptop)</li>
+                    <li>Log in to Claude in your browser</li>
+                    <li>The browser shows a <strong className="text-foreground">code</strong> (like &quot;ABCD-1234&quot;)</li>
+                    <li><strong className="text-foreground">Copy that code</strong> and paste it back into your <strong className="text-foreground">terminal window</strong> (the same one running Claude)</li>
+                  </ol>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    When your browser says &quot;Paste this into Claude Code&quot; — that means paste the code into the terminal window where you typed <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">claude</code>.
+                  </p>
+                </div>
               </div>
             </div>
             <div className="flex gap-3">

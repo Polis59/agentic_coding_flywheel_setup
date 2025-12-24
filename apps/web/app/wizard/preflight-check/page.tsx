@@ -26,6 +26,16 @@ const PREFLIGHT_COMMAND =
 
 const TROUBLESHOOTING = [
   {
+    title: "'bash' is not recognized / Get-Date error (Windows)",
+    fixes: [
+      "You're running this on your Windows computer, not on the VPS!",
+      "First, connect to your VPS with: ssh root@YOUR_VPS_IP",
+      "Wait until you see 'root@vps:~#' or similar",
+      "THEN paste the preflight command",
+      "The preflight command only works on the Linux VPS, not on Windows",
+    ],
+  },
+  {
     title: "APT is locked by another process",
     fixes: [
       "Wait 1-2 minutes (auto updates often finish quickly)",
@@ -120,6 +130,23 @@ export default function PreflightCheckPage() {
       <AlertCard variant="info" icon={ShieldCheck} title="Fast safety check">
         This quick scan validates OS, disk space, network access, and APT locks.
         Warnings are okay — you can still continue.
+      </AlertCard>
+
+      {/* Windows-specific warning - CRITICAL for confused users */}
+      <AlertCard variant="destructive" icon={AlertTriangle} title="Windows users: Common mistake!">
+        <div className="space-y-2">
+          <p>
+            If you paste this command and see errors like <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">&apos;bash&apos; is not recognized</code> or
+            <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">Get-Date : Cannot bind parameter</code>:
+          </p>
+          <p className="font-semibold">
+            You&apos;re running this on your Windows computer, NOT on the VPS!
+          </p>
+          <p>
+            Go back to your terminal, type <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">ssh root@{displayIP}</code>,
+            enter your VPS password, and THEN paste the preflight command.
+          </p>
+        </div>
       </AlertCard>
 
       {/* Command */}

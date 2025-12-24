@@ -154,6 +154,32 @@ export default function ReconnectUbuntuPage() {
             showCheckbox
             persistKey="reconnect-ubuntu"
           />
+
+          {/* Common mistake: using wrong credentials */}
+          <AlertCard variant="destructive" title="Getting 'Permission denied' or asked for password?">
+            <div className="space-y-2 text-sm">
+              <p>This means one of two things:</p>
+              <ol className="list-decimal list-inside space-y-1 mt-2">
+                <li>
+                  <strong className="text-foreground">SSH key wasn&apos;t set up correctly</strong> —
+                  the installer needs to complete successfully for this to work
+                </li>
+                <li>
+                  <strong className="text-foreground">You&apos;re using the wrong credentials</strong> —
+                  the ubuntu user uses your <em>SSH key</em>, NOT the root password
+                </li>
+              </ol>
+              <p className="mt-3 font-medium text-foreground">
+                If you&apos;re being asked for a password, try connecting as root instead:
+              </p>
+              <code className="block rounded bg-muted px-3 py-2 font-mono text-xs mt-2">
+                ssh root@{vpsIP}
+              </code>
+              <p className="mt-2 text-xs text-muted-foreground">
+                Use the VPS root password (the one from your provider), then re-run the installer.
+              </p>
+            </div>
+          </AlertCard>
         </div>
       </div>
 
