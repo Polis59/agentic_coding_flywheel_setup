@@ -575,7 +575,7 @@ install_all_cli_tools() {
     log_step "4/8" "Installing CLI tools..."
 
     # Install gum first for enhanced UI
-    install_gum
+    install_gum_cli_tool
 
     # APT-based tools
     install_apt_cli_tools
