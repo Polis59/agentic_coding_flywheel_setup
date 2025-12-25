@@ -1,7 +1,5 @@
-"use client";
-
 import Link from "next/link";
-import { notFound, useParams } from "next/navigation";
+import { notFound } from "next/navigation";
 import { type ReactNode } from "react";
 import {
   ArrowLeft,
@@ -14,16 +12,13 @@ import {
   LayoutGrid,
   Search,
   ShieldCheck,
-  Terminal,
   Wrench,
-  Copy,
-  Check,
 } from "lucide-react";
 import { motion } from "@/components/motion";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { CommandCard } from "@/components/command-card";
 import { springs, backgrounds } from "@/lib/design-tokens";
-import { useState, useCallback } from "react";
 
 type ToolId =
   | "claude-code"
@@ -174,48 +169,6 @@ const TOOLS: Record<ToolId, ToolCard> = {
   },
 };
 
-function QuickCommand({ command }: { command: string }) {
-  const [copied, setCopied] = useState(false);
-
-  const handleCopy = useCallback(async () => {
-    try {
-      await navigator.clipboard.writeText(command);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // Fallback
-      const textarea = document.createElement("textarea");
-      textarea.value = command;
-      textarea.style.position = "fixed";
-      textarea.style.opacity = "0";
-      document.body.appendChild(textarea);
-      textarea.select();
-      document.execCommand("copy");
-      document.body.removeChild(textarea);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
-  }, [command]);
-
-  return (
-    <div className="flex items-center gap-2 rounded-lg border border-border/50 bg-muted/30 px-3 py-2">
-      <Terminal className="h-4 w-4 shrink-0 text-primary" />
-      <code className="flex-1 font-mono text-sm">{command}</code>
-      <button
-        onClick={handleCopy}
-        className="shrink-0 rounded p-1 transition-colors hover:bg-muted"
-        aria-label={copied ? "Copied!" : "Copy command"}
-      >
-        {copied ? (
-          <Check className="h-4 w-4 text-[oklch(0.72_0.19_145)]" />
-        ) : (
-          <Copy className="h-4 w-4 text-muted-foreground" />
-        )}
-      </button>
-    </div>
-  );
-}
-
 function RelatedToolCard({ toolId }: { toolId: ToolId }) {
   const tool = TOOLS[toolId];
   if (!tool) return null;
@@ -239,9 +192,12 @@ function RelatedToolCard({ toolId }: { toolId: ToolId }) {
   );
 }
 
-export default function ToolCardPage() {
-  const params = useParams();
-  const tool = params.tool as string;
+interface Props {
+  params: Promise<{ tool: string }>;
+}
+
+export default async function ToolCardPage({ params }: Props) {
+  const { tool } = await params;
   const doc = TOOLS[tool as ToolId];
 
   if (!doc) {
@@ -340,7 +296,7 @@ export default function ToolCardPage() {
                 <p className="mb-2 text-sm font-medium text-muted-foreground">
                   Quick Start
                 </p>
-                <QuickCommand command={doc.quickCommand} />
+                <CommandCard command={doc.quickCommand} description="Command" />
               </motion.div>
             )}
 

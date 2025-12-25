@@ -149,8 +149,8 @@ export function isValidIP(ip: string): boolean {
   // Matches: 2001:db8::1, ::1, fe80::1%eth0, 2001:db8:85a3::8a2e:370:7334, etc.
   const ipv6Pattern = /^(([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]+|::(ffff(:0{1,4})?:)?((25[0-5]|(2[0-4]|1?[0-9])?[0-9])\.){3}(25[0-5]|(2[0-4]|1?[0-9])?[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1?[0-9])?[0-9])\.){3}(25[0-5]|(2[0-4]|1?[0-9])?[0-9]))$/;
 
-  // Remove zone ID (e.g., %eth0) for validation
-  const ipWithoutZone = normalized.replace(/%[a-zA-Z0-9]+$/, "");
+  // Remove zone ID (e.g., %eth0, %br-abc123, %my_iface) for validation
+  const ipWithoutZone = normalized.replace(/%[a-zA-Z0-9_-]+$/, "");
   return ipv6Pattern.test(ipWithoutZone);
 }
 

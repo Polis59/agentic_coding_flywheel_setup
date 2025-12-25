@@ -282,17 +282,35 @@ readonly OPTIONAL_REDACT_PATTERNS=(
 sanitize_content() {
     local content="$1"
     local result="$content"
+    local sed_flags="g"
+
+    # BSD sed doesn't support case-insensitive replacement flags. Prefer gI when available.
+    if printf 'test' | sed -E 's/test/TEST/gI' >/dev/null 2>&1; then
+        sed_flags="gI"
+    fi
 
     # Apply core redaction patterns
     for pattern in "${REDACT_PATTERNS[@]}"; do
         # Use sed with extended regex for pattern replacement
-        result=$(printf '%s' "$result" | sed -E "s/${pattern}/[REDACTED]/gI" 2>/dev/null || printf '%s' "$result")
+        local next_result
+        if next_result=$(printf '%s' "$result" | sed -E "s/${pattern}/[REDACTED]/${sed_flags}" 2>/dev/null); then
+            result="$next_result"
+        else
+            log_error "Sanitization failed for pattern: $pattern"
+            return 1
+        fi
     done
 
     # Apply optional patterns if enabled
     if [[ "${ACFS_SANITIZE_OPTIONAL:-0}" == "1" ]]; then
         for pattern in "${OPTIONAL_REDACT_PATTERNS[@]}"; do
-            result=$(printf '%s' "$result" | sed -E "s/${pattern}/[REDACTED]/gI" 2>/dev/null || printf '%s' "$result")
+            local next_result
+            if next_result=$(printf '%s' "$result" | sed -E "s/${pattern}/[REDACTED]/${sed_flags}" 2>/dev/null); then
+                result="$next_result"
+            else
+                log_error "Sanitization failed for optional pattern: $pattern"
+                return 1
+            fi
         done
     fi
 
@@ -600,7 +618,10 @@ export_session() {
         rm -f "$tmpfile"
     elif [[ "$sanitize" == "true" && "$format" != "json" ]]; then
         # For non-JSON formats, apply text sanitization
-        exported=$(sanitize_content "$exported")
+        if ! exported=$(sanitize_content "$exported"); then
+            log_error "Sanitization failed; refusing to output unsanitized export"
+            return 1
+        fi
     fi
 
     # Output

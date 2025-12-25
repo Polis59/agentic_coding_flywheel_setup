@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -158,7 +158,7 @@ export default function LearnDashboard() {
   const prefersReducedMotion = useReducedMotion();
 
   // Keyboard navigation state
-  const [selectedIndex, setSelectedIndex] = React.useState(-1);
+  const [selectedIndex, setSelectedIndex] = useState(-1);
   const accessibleLessons = LESSONS.filter((_, i) => {
     const status = getLessonStatus(i, completedLessons);
     return status !== "locked";
