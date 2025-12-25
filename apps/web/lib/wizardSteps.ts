@@ -223,13 +223,48 @@ export function useCompletedSteps(): [number[], (stepId: number) => void] {
 
   const mutation = useMutation({
     mutationFn: async (stepId: number) => {
-      const currentSteps = getCompletedSteps();
+      // Use query cache as source of truth to avoid race conditions when
+      // markComplete is called rapidly multiple times. Falls back to
+      // localStorage for initial hydration.
+      const currentSteps =
+        queryClient.getQueryData<number[]>(wizardStepsKeys.completedSteps) ??
+        getCompletedSteps();
       const newSteps = addCompletedStep(currentSteps, stepId);
       setCompletedSteps(newSteps);
       return newSteps;
     },
-    onSuccess: (newSteps) => {
+    onMutate: async (stepId) => {
+      // Cancel any outgoing refetches to prevent overwrites
+      await queryClient.cancelQueries({
+        queryKey: wizardStepsKeys.completedSteps,
+      });
+
+      // Snapshot previous value for rollback
+      const previousSteps = queryClient.getQueryData<number[]>(
+        wizardStepsKeys.completedSteps
+      );
+
+      // Optimistically update cache immediately (synchronous) so subsequent
+      // rapid mutations see the updated value
+      const newSteps = addCompletedStep(previousSteps ?? [], stepId);
       queryClient.setQueryData(wizardStepsKeys.completedSteps, newSteps);
+
+      return { previousSteps };
+    },
+    onError: (_err, _stepId, context) => {
+      // Rollback to previous value on error
+      if (context?.previousSteps !== undefined) {
+        queryClient.setQueryData(
+          wizardStepsKeys.completedSteps,
+          context.previousSteps
+        );
+      }
+    },
+    onSettled: () => {
+      // Refetch to ensure cache is in sync with localStorage
+      queryClient.invalidateQueries({
+        queryKey: wizardStepsKeys.completedSteps,
+      });
     },
   });
 
