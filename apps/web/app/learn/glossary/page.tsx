@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import { useMemo, useState, type ReactNode } from "react";
-import { ArrowLeft, BookOpen, Home, Search, Wrench, ShieldCheck, Type } from "lucide-react";
+import { ArrowLeft, BookOpen, Home, Search, Wrench, ShieldCheck, Type, FileQuestion } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { getAllTerms, type JargonTerm } from "@/lib/jargon";
+import { motion, springs, staggerContainer, fadeUp } from "@/components/motion";
+import { useScrollReveal } from "@/lib/hooks/useScrollReveal";
 
 type GlossaryCategory = "concepts" | "tools" | "protocols" | "acronyms";
 type CategoryFilter = "all" | GlossaryCategory;
@@ -146,6 +148,8 @@ function CategoryChip({
 export default function GlossaryPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [category, setCategory] = useState<CategoryFilter>("all");
+  const { ref: heroRef, isInView: heroInView } = useScrollReveal({ threshold: 0.1 });
+  const { ref: contentRef, isInView: contentInView } = useScrollReveal({ threshold: 0.05 });
 
   const allTerms = useMemo(() => {
     const terms = getAllTerms();
