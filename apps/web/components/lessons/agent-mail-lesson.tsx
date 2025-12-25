@@ -461,26 +461,27 @@ function CoordinationFlow() {
   ];
 
   return (
-    <div className="flex flex-wrap justify-center gap-4">
+    <div className="flex flex-wrap justify-center items-start gap-2 sm:gap-4">
       {steps.map((step, i) => (
-        <motion.div
-          key={i}
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: i * 0.1 }}
-          className="flex flex-col items-center gap-3"
-        >
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/20 to-violet-500/20 border border-primary/30 text-primary">
-            {step.icon}
-          </div>
-          <div className="text-center">
-            <p className="font-bold text-white text-sm">{step.title}</p>
-            <p className="text-xs text-white/50 max-w-[100px]">{step.desc}</p>
-          </div>
+        <div key={i} className="flex items-center gap-2 sm:gap-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: i * 0.1 }}
+            className="flex flex-col items-center gap-3"
+          >
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/20 to-violet-500/20 border border-primary/30 text-primary">
+              {step.icon}
+            </div>
+            <div className="text-center">
+              <p className="font-bold text-white text-sm">{step.title}</p>
+              <p className="text-xs text-white/50 max-w-[100px]">{step.desc}</p>
+            </div>
+          </motion.div>
           {i < steps.length - 1 && (
-            <div className="hidden sm:block absolute">→</div>
+            <span className="hidden sm:block text-white/30 text-lg">→</span>
           )}
-        </motion.div>
+        </div>
       ))}
     </div>
   );
