@@ -1833,10 +1833,21 @@ run_ubuntu_upgrade_phase() {
                     repo_ref="${ACFS_REF:-main}"
                     install_url="https://raw.githubusercontent.com/${repo_owner}/${repo_name}/${repo_ref}/install.sh"
 
-                    # Collect original args, ensuring we have core flags
-                    local -a continue_args=()
-                    [[ "$YES_MODE" == "true" ]] && continue_args+=(--yes)
-                    [[ -n "${INSTALL_MODE:-}" ]] && continue_args+=(--mode "$INSTALL_MODE")
+                    # Preserve the original installer argv so the post-reboot run
+                    # behaves exactly like the initial invocation (e.g. --skip-* flags,
+                    # --target-ubuntu, --strict, selection flags, etc.).
+                    local -a continue_args=("$@")
+
+                    # Ensure this pre-upgrade reboot path continues WITH the Ubuntu upgrade.
+                    # The resume infrastructure script typically appends --skip-ubuntu-upgrade,
+                    # but for this stage we must not include it.
+                    local -a filtered_args=()
+                    local raw_arg=""
+                    for raw_arg in "${continue_args[@]}"; do
+                        [[ "$raw_arg" == "--skip-ubuntu-upgrade" ]] && continue
+                        filtered_args+=("$raw_arg")
+                    done
+                    continue_args=("${filtered_args[@]}")
 
                     # Shell-escape values we embed into the generated script.
                     local repo_ref_q
