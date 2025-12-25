@@ -918,9 +918,10 @@ export default function HomePage() {
             GitHub
           </a>
           <Link
-            href="/learn"
-            className="hidden text-sm text-muted-foreground transition-colors hover:text-foreground sm:block"
+            href="/learn/welcome"
+            className="hidden items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground sm:flex"
           >
+            <BookOpen className="h-4 w-4" />
             Learn
           </Link>
           <Button asChild size="sm" variant="outline" className="border-primary/30 hover:bg-primary/10">
@@ -1090,7 +1091,7 @@ export default function HomePage() {
                   GitHub
                 </a>
                 <Link
-                  href="/learn"
+                  href="/learn/welcome"
                   className="transition-colors hover:text-foreground"
                 >
                   Learning Hub
