@@ -152,6 +152,7 @@ export type ModuleCategory =
   | 'filesystem'
   | 'shell'
   | 'cli'
+  | 'network'
   | 'lang'
   | 'tools'
   | 'db'

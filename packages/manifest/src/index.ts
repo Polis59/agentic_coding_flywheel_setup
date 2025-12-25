@@ -42,7 +42,9 @@ export {
 
 // Export utility functions
 export {
+  isValidCategory,
   getModuleCategory,
+  resolveModuleCategory,
   getModulesByCategory,
   getModuleById,
   getModuleDependencies,

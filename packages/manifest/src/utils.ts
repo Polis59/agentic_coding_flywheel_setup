@@ -6,11 +6,38 @@
 import type { Manifest, Module, ModuleCategory } from './types.js';
 
 /**
+ * Valid module categories (must match ModuleCategory type in types.ts)
+ */
+const VALID_CATEGORIES = new Set<string>([
+  'base',
+  'users',
+  'filesystem',
+  'shell',
+  'cli',
+  'network',
+  'lang',
+  'tools',
+  'db',
+  'cloud',
+  'agents',
+  'stack',
+  'acfs',
+]);
+
+/**
+ * Check if a string is a valid ModuleCategory
+ */
+export function isValidCategory(category: string): category is ModuleCategory {
+  return VALID_CATEGORIES.has(category);
+}
+
+/**
  * Extract the category from a module ID
  * Module IDs follow the pattern: category.name (e.g., "shell.zsh", "lang.bun")
  *
  * @param moduleId - The module ID
  * @returns The category prefix
+ * @throws Error if the category extracted is not a valid ModuleCategory
  *
  * @example
  * ```ts
@@ -20,7 +47,13 @@ import type { Manifest, Module, ModuleCategory } from './types.js';
  */
 export function getModuleCategory(moduleId: string): ModuleCategory {
   const [category] = moduleId.split('.');
-  return category as ModuleCategory;
+  if (!isValidCategory(category)) {
+    throw new Error(
+      `Invalid module category '${category}' from module ID '${moduleId}'. ` +
+        `Valid categories: ${[...VALID_CATEGORIES].join(', ')}`
+    );
+  }
+  return category;
 }
 
 /**
@@ -29,10 +62,17 @@ export function getModuleCategory(moduleId: string): ModuleCategory {
  *
  * @param module - The module to resolve
  * @returns The resolved category
+ * @throws Error if the category is not valid
  */
 export function resolveModuleCategory(module: Module): ModuleCategory {
   if (module.category) {
-    return module.category as ModuleCategory;
+    if (!isValidCategory(module.category)) {
+      throw new Error(
+        `Invalid category '${module.category}' for module '${module.id}'. ` +
+          `Valid categories: ${[...VALID_CATEGORIES].join(', ')}`
+      );
+    }
+    return module.category;
   }
   return getModuleCategory(module.id);
 }
