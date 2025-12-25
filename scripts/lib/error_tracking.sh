@@ -388,14 +388,19 @@ clear_error() {
 # Convenience Wrappers
 # ============================================================
 
-# Run a phase with automatic context management
-# Usage: run_phase <phase_id> <phase_name> <function_to_run> [args...]
+# Run a phase with automatic context management (lightweight version)
+#
+# NOTE: For full phase execution with skip logic, state tracking, and timing,
+# use state.sh's run_phase() instead. This lightweight version only handles
+# error context management and is NOT recommended for normal use.
+#
+# Usage: _run_phase_context_only <phase_id> <phase_name> <function_to_run> [args...]
 # Returns: Function exit code
 #
 # Example:
-#   run_phase "cli_tools" "CLI Tools" install_cli_tools
+#   _run_phase_context_only "cli_tools" "CLI Tools" install_cli_tools
 #
-run_phase() {
+_run_phase_context_only() {
     local phase_id="$1"
     local phase_name="$2"
     local func="$3"
