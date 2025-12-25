@@ -467,15 +467,13 @@ modules:
     installed_check:
       run_as: target_user
       command: "command -v claude"
-    verified_installer:
-      tool: claude
-      runner: bash
-      fallback_url: "https://claude.ai/install.sh"
-    install: []
+    install:
+      # Official package (installs `claude` into ~/.bun/bin)
+      - ~/.bun/bin/bun install -g --trust @anthropic-ai/claude-code@stable
     verify:
       - claude --version || claude --help
     notes:
-      - "Install claude code via official method"
+      - "Install Claude Code via official package"
 
   - id: agents.codex
     description: OpenAI Codex CLI
@@ -662,6 +660,7 @@ modules:
     verified_installer:
       tool: ntm
       runner: bash
+      args: ["--no-shell"]
     install: []
     verify:
       - ntm --help

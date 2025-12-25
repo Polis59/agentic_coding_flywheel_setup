@@ -2625,6 +2625,8 @@ install_agents_phase() {
     fi
 
     # Claude Code (install as target user)
+    # NOTE: The native installer may choose a non-standard install path; CI smoke
+    # checks require claude to exist at ~/.local/bin/claude or ~/.bun/bin/claude.
     local claude_bin_local="$TARGET_HOME/.local/bin/claude"
     local claude_bin_bun="$TARGET_HOME/.bun/bin/claude"
     if [[ -x "$claude_bin_local" ]]; then
@@ -2632,17 +2634,53 @@ install_agents_phase() {
     elif [[ -x "$claude_bin_bun" ]]; then
         log_detail "Claude Code already installed ($claude_bin_bun)"
     else
+        run_as_target mkdir -p "$TARGET_HOME/.local/bin" 2>/dev/null || true
+
         log_detail "Installing Claude Code (native) for $TARGET_USER"
-        try_step "Installing Claude Code" acfs_run_verified_upstream_script_as_target "claude" "bash" stable || log_warn "Claude Code installation failed"
+        try_step "Installing Claude Code (native)" acfs_run_verified_upstream_script_as_target "claude" "bash" stable || true
+
+        if [[ ! -x "$claude_bin_local" && ! -x "$claude_bin_bun" ]]; then
+            log_detail "Claude Code not found in standard paths; attempting bun install"
+            try_step "Installing Claude Code (bun)" run_as_target "$bun_bin" install -g --trust @anthropic-ai/claude-code@stable || true
+        fi
+
+        # Best-effort: if claude landed in ~/.claude/*, link it into ~/.local/bin.
+        if [[ ! -x "$claude_bin_local" && ! -x "$claude_bin_bun" ]]; then
+            local claude_candidate=""
+            local candidates=(
+                "$TARGET_HOME/.claude/bin/claude"
+                "$TARGET_HOME/.claude/local/bin/claude"
+            )
+            for claude_candidate in "${candidates[@]}"; do
+                if [[ -x "$claude_candidate" ]]; then
+                    break
+                fi
+                claude_candidate=""
+            done
+
+            if [[ -z "$claude_candidate" ]] && [[ -d "$TARGET_HOME/.claude" ]]; then
+                claude_candidate="$(run_as_target find "$TARGET_HOME/.claude" -maxdepth 4 -type f -name claude -perm -111 -print -quit 2>/dev/null || true)"
+            fi
+
+            if [[ -n "$claude_candidate" ]] && [[ -x "$claude_candidate" ]]; then
+                try_step "Linking Claude Code into ~/.local/bin" run_as_target ln -sf "$claude_candidate" "$claude_bin_local" || true
+            fi
+        fi
+
+        if [[ -x "$claude_bin_local" || -x "$claude_bin_bun" ]]; then
+            log_success "Claude Code installed"
+        else
+            log_warn "Claude Code installation may have failed (claude not found in standard paths)"
+        fi
     fi
 
     # Codex CLI (install as target user)
     log_detail "Installing Codex CLI for $TARGET_USER"
-    try_step "Installing Codex CLI" run_as_target "$bun_bin" install -g @openai/codex@latest || true
+    try_step "Installing Codex CLI" run_as_target "$bun_bin" install -g --trust @openai/codex@latest || true
 
     # Gemini CLI (install as target user)
     log_detail "Installing Gemini CLI for $TARGET_USER"
-    try_step "Installing Gemini CLI" run_as_target "$bun_bin" install -g @google/gemini-cli@latest || true
+    try_step "Installing Gemini CLI" run_as_target "$bun_bin" install -g --trust @google/gemini-cli@latest || true
 
     log_success "Coding agents installed"
 }
@@ -2749,7 +2787,7 @@ install_cloud_db_legacy_cloud() {
                 fi
 
                 log_detail "Installing $cli via bun"
-                if try_step "Installing $cli via bun" run_as_target "$bun_bin" install -g "${cli}@latest"; then
+                if try_step "Installing $cli via bun" run_as_target "$bun_bin" install -g --trust "${cli}@latest"; then
                     if [[ -x "$TARGET_HOME/.bun/bin/$cli" ]]; then
                         log_success "$cli installed"
                     else
@@ -2839,7 +2877,14 @@ install_stack_phase() {
         log_detail "NTM already installed"
     else
         log_detail "Installing NTM"
-        try_step "Installing NTM" acfs_run_verified_upstream_script_as_target "ntm" "bash" || log_warn "NTM installation may have failed"
+        # The upstream installer can exit non-zero in non-interactive CI while still
+        # successfully installing. Run it best-effort, then verify the binary.
+        try_step_eval "Running NTM installer" "acfs_run_verified_upstream_script_as_target 'ntm' 'bash' || true"
+        if _smoke_run_as_target "command -v ntm >/dev/null && ntm --help >/dev/null 2>&1"; then
+            log_success "NTM installed"
+        else
+            log_warn "NTM installation failed (ntm not working)"
+        fi
     fi
 
     # MCP Agent Mail (check for mcp-agent-mail stub or mcp_agent_mail directory)
