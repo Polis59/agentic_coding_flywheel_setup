@@ -220,3 +220,128 @@ export const badges = {
   /** Subtle badge */
   subtle: "inline-flex items-center rounded-full border border-border/50 bg-card/50 px-3 py-1.5 text-sm font-medium transition-all hover:scale-105 hover:border-primary/30",
 } as const;
+
+// =============================================================================
+// TOOL BRAND COLORS
+// =============================================================================
+
+/**
+ * Brand colors for specific tools (used in ToolBadge components)
+ */
+export const toolColors = {
+  claudeCode: "oklch(0.78 0.16 75)",
+  codexCli: "oklch(0.72 0.19 145)",
+  geminiCli: "oklch(0.75 0.18 195)",
+  bun: "oklch(0.78 0.16 75)",
+  rust: "oklch(0.65 0.22 25)",
+  go: "oklch(0.75 0.18 195)",
+  tmux: "oklch(0.72 0.19 145)",
+  zsh: "oklch(0.7 0.2 330)",
+} as const;
+
+// =============================================================================
+// GRID GAPS
+// =============================================================================
+
+/**
+ * Grid gap presets
+ */
+export const gridGaps = {
+  /** Small gap (1rem) */
+  sm: "gap-4",
+  /** Medium gap (1.5rem) */
+  md: "gap-6",
+  /** Large gap (3rem) */
+  lg: "gap-12",
+  /** Extra large gap (4rem) */
+  xl: "gap-16",
+} as const;
+
+// =============================================================================
+// FRAMER MOTION SPRINGS
+// =============================================================================
+
+/**
+ * Framer Motion spring configurations for consistent animations
+ */
+export const springs = {
+  /** Smooth spring for general animations */
+  smooth: {
+    type: "spring" as const,
+    stiffness: 100,
+    damping: 20,
+    mass: 1,
+  },
+  /** Bouncy spring for playful interactions */
+  bouncy: {
+    type: "spring" as const,
+    stiffness: 400,
+    damping: 25,
+    mass: 0.8,
+  },
+  /** Stiff spring for snappy feedback */
+  stiff: {
+    type: "spring" as const,
+    stiffness: 500,
+    damping: 30,
+    mass: 0.5,
+  },
+} as const;
+
+/**
+ * Stagger animation helper - calculates delay for list item animations
+ * @param index - The index of the item in the list
+ * @param baseDelay - Base delay between items (default 0.1s)
+ */
+export function staggerDelay(index: number, baseDelay = 0.1): number {
+  return index * baseDelay;
+}
+
+/**
+ * Framer Motion animation variants
+ */
+export const motionVariants = {
+  /** Fade up animation */
+  fadeUp: {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0 },
+  },
+  /** Fade in animation */
+  fadeIn: {
+    hidden: { opacity: 0 },
+    visible: { opacity: 1 },
+  },
+  /** Scale up animation */
+  scaleUp: {
+    hidden: { opacity: 0, scale: 0.95 },
+    visible: { opacity: 1, scale: 1 },
+  },
+  /** Stagger container */
+  staggerContainer: {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: { staggerChildren: 0.1 },
+    },
+  },
+} as const;
+
+// =============================================================================
+// TRANSITIONS
+// =============================================================================
+
+/**
+ * Transition class presets
+ */
+export const transitions = {
+  /** Standard all-properties transition */
+  all: "transition-all duration-300",
+  /** Fast all-properties transition */
+  fast: "transition-all duration-150",
+  /** Opacity transition */
+  opacity: "transition-opacity duration-300",
+  /** Transform transition */
+  transform: "transition-transform duration-300",
+  /** Colors transition */
+  colors: "transition-colors duration-200",
+} as const;
