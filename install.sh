@@ -1863,6 +1863,15 @@ run_ubuntu_upgrade_phase() {
         return 0
     fi
 
+    # Ubuntu distribution upgrades require root (do-release-upgrade, systemd units,
+    # /var/lib/acfs state). If the installer is being run as a sudo-capable user,
+    # abort with clear guidance rather than failing mid-upgrade.
+    if [[ $EUID -ne 0 ]]; then
+        log_error "Ubuntu auto-upgrade requires running the installer as root"
+        log_info "Re-run as root (e.g., run 'sudo -i' then run the install command again), or use --skip-ubuntu-upgrade."
+        return 1
+    fi
+
     # Calculate upgrade path (function takes target version NUMBER, determines current internally)
     # Returns newline-separated list of version strings to upgrade through
     local upgrade_path
