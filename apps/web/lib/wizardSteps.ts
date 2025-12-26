@@ -245,16 +245,19 @@ export function useCompletedSteps(): [number[], (stepId: number) => void] {
       });
 
       // Snapshot previous value for rollback
-      const previousSteps = queryClient.getQueryData<number[]>(
+      const cachedSteps = queryClient.getQueryData<number[]>(
         wizardStepsKeys.completedSteps
       );
 
       // Optimistically update cache immediately (synchronous) so subsequent
       // rapid mutations see the updated value
-      const newSteps = addCompletedStep(previousSteps ?? [], stepId);
+      // Important: fall back to localStorage when cache is empty to avoid
+      // overwriting existing progress on first mutation before hydration.
+      const baseSteps = cachedSteps ?? getCompletedSteps();
+      const newSteps = addCompletedStep(baseSteps, stepId);
       queryClient.setQueryData(wizardStepsKeys.completedSteps, newSteps);
 
-      return { previousSteps };
+      return { previousSteps: cachedSteps };
     },
     onError: (_err, _stepId, context) => {
       // Rollback to previous value on error
@@ -263,6 +266,10 @@ export function useCompletedSteps(): [number[], (stepId: number) => void] {
           wizardStepsKeys.completedSteps,
           context.previousSteps
         );
+      } else {
+        queryClient.invalidateQueries({
+          queryKey: wizardStepsKeys.completedSteps,
+        });
       }
     },
     onSettled: () => {
