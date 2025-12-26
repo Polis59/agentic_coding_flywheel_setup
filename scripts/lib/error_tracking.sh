@@ -189,7 +189,7 @@ try_step() {
             max_len=2000
         fi
         local captured
-        captured="$(head -c "$((max_len + 1))" "$output_file" 2>/dev/null || echo "")"
+        captured="$(head -c "$((max_len + 1))" "$output_file" 2>/dev/null || printf '')"
 
         if [[ ${#captured} -gt $max_len ]]; then
             captured="${captured:0:$max_len}"
@@ -559,8 +559,8 @@ retry_with_backoff() {
     if [[ -z "$stderr_file" || -z "$stdout_file" ]]; then
         use_temp_files="false"
         # Best-effort cleanup if only one temp file was created.
-        [[ -n "$stderr_file" ]] && rm -f "$stderr_file" 2>/dev/null || true
-        [[ -n "$stdout_file" ]] && rm -f "$stdout_file" 2>/dev/null || true
+        [[ -n "$stderr_file" ]] && rm -f -- "$stderr_file" 2>/dev/null || true
+        [[ -n "$stdout_file" ]] && rm -f -- "$stdout_file" 2>/dev/null || true
         stderr_file=""
         stdout_file=""
     fi
@@ -586,7 +586,10 @@ retry_with_backoff() {
             else
                 exit_code=$?
             fi
-            stderr_content=$(cat "$stderr_file" 2>/dev/null || echo "")
+            stderr_content="$(head -c "$((ERROR_OUTPUT_MAX_LENGTH + 1))" "$stderr_file" 2>/dev/null || printf '')"
+            if [[ ${#stderr_content} -gt $ERROR_OUTPUT_MAX_LENGTH ]]; then
+                stderr_content="${stderr_content:0:$ERROR_OUTPUT_MAX_LENGTH}"
+            fi
         else
             # Fallback: capture combined output in-memory.
             #
@@ -621,7 +624,7 @@ retry_with_backoff() {
             fi
             # Output the captured stdout
             cat "$stdout_file"
-            rm -f "$stderr_file" "$stdout_file" 2>/dev/null
+            rm -f -- "$stderr_file" "$stdout_file" 2>/dev/null || true
             return 0
         fi
 
@@ -638,16 +641,23 @@ retry_with_backoff() {
             LAST_ERROR_CODE=$exit_code
             LAST_ERROR_TIME=$(date -Iseconds)
             if [[ "$use_temp_files" == "true" ]]; then
-                LAST_ERROR_OUTPUT=$(head -c "$ERROR_OUTPUT_MAX_LENGTH" "$stderr_file" 2>/dev/null || echo "")
+                local captured
+                captured="$(head -c "$((ERROR_OUTPUT_MAX_LENGTH + 1))" "$stderr_file" 2>/dev/null || printf '')"
+                if [[ ${#captured} -gt $ERROR_OUTPUT_MAX_LENGTH ]]; then
+                    captured="${captured:0:$ERROR_OUTPUT_MAX_LENGTH}"
+                    LAST_ERROR_OUTPUT="${captured}... [truncated]"
+                else
+                    LAST_ERROR_OUTPUT="$captured"
+                fi
             else
-                LAST_ERROR_OUTPUT="${stderr_content:0:$ERROR_OUTPUT_MAX_LENGTH}"
+                LAST_ERROR_OUTPUT="$stderr_content"
             fi
             # Output stderr for debugging
             if [[ -n "$stderr_content" ]]; then
                 echo "$stderr_content" >&2
             fi
             if [[ "$use_temp_files" == "true" ]]; then
-                rm -f "$stderr_file" "$stdout_file" 2>/dev/null
+                rm -f -- "$stderr_file" "$stdout_file" 2>/dev/null || true
             fi
             return "$exit_code"
         fi
@@ -673,13 +683,20 @@ retry_with_backoff() {
     LAST_ERROR_CODE=$exit_code
     LAST_ERROR_TIME=$(date -Iseconds)
     if [[ "$use_temp_files" == "true" ]]; then
-        LAST_ERROR_OUTPUT=$(head -c "$ERROR_OUTPUT_MAX_LENGTH" "$stderr_file" 2>/dev/null || echo "")
+        local captured
+        captured="$(head -c "$((ERROR_OUTPUT_MAX_LENGTH + 1))" "$stderr_file" 2>/dev/null || printf '')"
+        if [[ ${#captured} -gt $ERROR_OUTPUT_MAX_LENGTH ]]; then
+            captured="${captured:0:$ERROR_OUTPUT_MAX_LENGTH}"
+            LAST_ERROR_OUTPUT="${captured}... [truncated]"
+        else
+            LAST_ERROR_OUTPUT="$captured"
+        fi
     else
-        LAST_ERROR_OUTPUT="${stderr_content:0:$ERROR_OUTPUT_MAX_LENGTH}"
+        LAST_ERROR_OUTPUT="$stderr_content"
     fi
 
     if [[ "$use_temp_files" == "true" ]]; then
-        rm -f "$stderr_file" "$stdout_file" 2>/dev/null
+        rm -f -- "$stderr_file" "$stdout_file" 2>/dev/null || true
     fi
     return "$exit_code"
 }

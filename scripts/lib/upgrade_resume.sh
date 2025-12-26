@@ -57,9 +57,35 @@ read_target_version_from_state() {
 
 compute_version_num() {
     local version="$1"
-    local major="${version%%.*}"
-    local minor="${version#*.}"
-    printf "%d%02d" "$major" "$minor"
+    if [[ ! "$version" =~ ^([0-9]+)\.([0-9]+)$ ]]; then
+        return 1
+    fi
+
+    local major="${BASH_REMATCH[1]}"
+    local minor="${BASH_REMATCH[2]}"
+
+    # Force base-10 parsing so versions like "25.08" don't get treated as octal.
+    printf "%d%02d" "$((10#$major))" "$((10#$minor))"
+}
+
+ubuntu_is_at_or_beyond_target_version() {
+    local current_version="$1"
+
+    if [[ "$current_version" == "$UBUNTU_TARGET_VERSION" ]]; then
+        return 0
+    fi
+
+    if [[ "$current_version" =~ ^[0-9]+\.[0-9]+$ && "${UBUNTU_TARGET_VERSION_NUM:-}" =~ ^[0-9]+$ ]]; then
+        local current_version_num
+        current_version_num="$(compute_version_num "$current_version" || printf '')"
+        [[ -n "$current_version_num" ]] || return 1
+
+        if [[ "$current_version_num" -ge "$UBUNTU_TARGET_VERSION_NUM" ]]; then
+            return 0
+        fi
+    fi
+
+    return 1
 }
 
 state_target_version="$(read_target_version_from_state "$ACFS_STATE_FILE" || true)"
@@ -69,7 +95,10 @@ fi
 export UBUNTU_TARGET_VERSION
 
 if [[ -z "${UBUNTU_TARGET_VERSION_NUM:-}" ]]; then
-    UBUNTU_TARGET_VERSION_NUM="$(compute_version_num "$UBUNTU_TARGET_VERSION")"
+    UBUNTU_TARGET_VERSION_NUM="$(compute_version_num "$UBUNTU_TARGET_VERSION" || printf '')"
+fi
+if [[ ! "${UBUNTU_TARGET_VERSION_NUM:-}" =~ ^[0-9]+$ ]]; then
+    UBUNTU_TARGET_VERSION_NUM=""
 fi
 export UBUNTU_TARGET_VERSION_NUM
 
@@ -248,6 +277,7 @@ launch_continue_script() {
                 --property=TimeoutStartSec=7200 \
                 --setenv=HOME=/root \
                 /bin/bash "$script" 2>&1 | tee -a "$ACFS_LOG"
+            exit "${PIPESTATUS[0]:-1}"
         ); then
             log "ACFS continuation launched via systemd-run"
             log "Monitor with: journalctl -u acfs-continue-install -f"
@@ -292,8 +322,8 @@ log "Current Ubuntu version (from system): $CURRENT_UBUNTU_VERSION"
 log "Target Ubuntu version: $UBUNTU_TARGET_VERSION"
 
 # If we're already at target, we're DONE - clean up and exit
-if [[ "$CURRENT_UBUNTU_VERSION" == "$UBUNTU_TARGET_VERSION" ]]; then
-    log "SUCCESS: Already at target version $UBUNTU_TARGET_VERSION!"
+if ubuntu_is_at_or_beyond_target_version "$CURRENT_UBUNTU_VERSION"; then
+    log "SUCCESS: Already at or beyond target version (current: $CURRENT_UBUNTU_VERSION, target: $UBUNTU_TARGET_VERSION)!"
     log "Cleaning up upgrade infrastructure..."
 
     # Disable service FIRST to prevent any possibility of loop
@@ -417,9 +447,9 @@ if [[ -z "$next_version" ]]; then
     log_error "No next version found but upgrade not marked complete"
     log "This may indicate a corrupted state file. Current version: $CURRENT_UBUNTU_VERSION"
 
-    # Safety check: if we're at target, just clean up
-    if [[ "$CURRENT_UBUNTU_VERSION" == "$UBUNTU_TARGET_VERSION" ]]; then
-        log "Actually at target version - cleaning up anyway"
+    # Safety check: if we're at or beyond target, just clean up
+    if ubuntu_is_at_or_beyond_target_version "$CURRENT_UBUNTU_VERSION"; then
+        log "Actually at or beyond target version - cleaning up anyway"
         cleanup_service
         remove_motd
         launch_continue_script || true
