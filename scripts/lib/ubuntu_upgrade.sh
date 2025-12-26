@@ -1116,17 +1116,28 @@ upgrade_teardown_infrastructure() {
 
     # Disable and remove systemd service
     systemctl disable acfs-upgrade-resume.service 2>/dev/null || true
-    rm -f /etc/systemd/system/acfs-upgrade-resume.service
+    rm -f -- /etc/systemd/system/acfs-upgrade-resume.service
     systemctl daemon-reload
 
     # Remove MOTD notice
     upgrade_remove_motd
 
     # Remove temporary files (keep logs)
-    rm -rf "${ACFS_RESUME_DIR:?}/lib"
-    rm -f "${ACFS_RESUME_DIR:?}/upgrade_resume.sh"
-    rm -f "${ACFS_RESUME_DIR:?}/continue_install.sh"
-    rm -f "${ACFS_RESUME_DIR:?}/state.json"
+    local expected_resume_dir="/var/lib/acfs"
+    if [[ "${ACFS_RESUME_DIR:-}" != "$expected_resume_dir" ]]; then
+        log_error "Refusing to tear down unexpected ACFS_RESUME_DIR: ${ACFS_RESUME_DIR:-<unset>} (expected: $expected_resume_dir)"
+        return 1
+    fi
+
+    local lib_dir="${ACFS_RESUME_DIR}/lib"
+    local resume_script="${ACFS_RESUME_DIR}/upgrade_resume.sh"
+    local continue_script="${ACFS_RESUME_DIR}/continue_install.sh"
+    local state_file="${ACFS_RESUME_DIR}/state.json"
+
+    rm -rf -- "$lib_dir"
+    rm -f -- "$resume_script"
+    rm -f -- "$continue_script"
+    rm -f -- "$state_file"
 
     # Keep the directory for logs reference
     # rm -rf "${ACFS_RESUME_DIR}"
