@@ -210,7 +210,11 @@ launch_continue_script() {
 
     if [[ ! -f "$script" ]]; then
         log "No continue_install.sh found - manual installation needed"
-        log "Run: curl -fsSL https://raw.githubusercontent.com/Dicklesworthstone/agentic_coding_flywheel_setup/main/install.sh | bash -s -- --yes --mode vibe"
+        local curl_cmd="curl -fsSL"
+        if command -v curl &>/dev/null && curl --help all 2>/dev/null | grep -q -- '--proto'; then
+            curl_cmd="curl --proto '=https' --proto-redir '=https' -fsSL"
+        fi
+        log "Run: ${curl_cmd} https://raw.githubusercontent.com/Dicklesworthstone/agentic_coding_flywheel_setup/main/install.sh | bash -s -- --yes --mode vibe"
         return 1
     fi
 

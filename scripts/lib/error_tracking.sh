@@ -727,5 +727,10 @@ fetch_with_retry() {
     local url="$1"
     shift
 
-    retry_with_backoff "Fetching $url" curl -fsSL "$@" "$url"
+    local -a curl_args=(-fsSL)
+    if command -v curl &>/dev/null && curl --help all 2>/dev/null | grep -q -- '--proto'; then
+        curl_args=(--proto '=https' --proto-redir '=https' -fsSL)
+    fi
+
+    retry_with_backoff "Fetching $url" curl "${curl_args[@]}" "$@" "$url"
 }

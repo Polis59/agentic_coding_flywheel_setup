@@ -451,12 +451,14 @@ SAFE_PATTERNS=(
   'git[[:space:]]+clean[[:space:]]+-n([[:space:]]|$)'
   'git[[:space:]]+clean[[:space:]]+--dry-run([[:space:]]|$)'
   # Allow rm -rf on temp directories (ephemeral by design)
-  'rm[[:space:]]+-[a-z]*r[a-z]*f[a-z]*[[:space:]]+/tmp/'
-  'rm[[:space:]]+-[a-z]*r[a-z]*f[a-z]*[[:space:]]+/var/tmp/'
-  'rm[[:space:]]+-[a-z]*r[a-z]*f[a-z]*[[:space:]]+\\$TMPDIR/'
-  'rm[[:space:]]+-[a-z]*r[a-z]*f[a-z]*[[:space:]]+\\$\\{TMPDIR'
-  'rm[[:space:]]+-[a-z]*r[a-z]*f[a-z]*[[:space:]]+\"\\$TMPDIR/'
-  'rm[[:space:]]+-[a-z]*r[a-z]*f[a-z]*[[:space:]]+\"\\$\\{TMPDIR'
+  'rm[[:space:]]+-[a-z]*r[a-z]*f[a-z]*([[:space:]]+--)?[[:space:]]+/tmp/'
+  'rm[[:space:]]+-[a-z]*r[a-z]*f[a-z]*([[:space:]]+--)?[[:space:]]+\"/tmp/'
+  'rm[[:space:]]+-[a-z]*r[a-z]*f[a-z]*([[:space:]]+--)?[[:space:]]+/var/tmp/'
+  'rm[[:space:]]+-[a-z]*r[a-z]*f[a-z]*([[:space:]]+--)?[[:space:]]+\"/var/tmp/'
+  'rm[[:space:]]+-[a-z]*r[a-z]*f[a-z]*([[:space:]]+--)?[[:space:]]+\\$TMPDIR/'
+  'rm[[:space:]]+-[a-z]*r[a-z]*f[a-z]*([[:space:]]+--)?[[:space:]]+\\$\\{TMPDIR'
+  'rm[[:space:]]+-[a-z]*r[a-z]*f[a-z]*([[:space:]]+--)?[[:space:]]+\"\\$TMPDIR/'
+  'rm[[:space:]]+-[a-z]*r[a-z]*f[a-z]*([[:space:]]+--)?[[:space:]]+\"\\$\\{TMPDIR'
 )
 
 for pat in "${SAFE_PATTERNS[@]}"; do

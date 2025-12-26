@@ -747,7 +747,7 @@ check_agent_path_conflicts() {
             # Package manager version - warn about potential conflicts
             check "agent.path.claude" "Claude Code path" "warn" \
                 "using bun/npm version ($claude_path)" \
-                "rm '$claude_path' to use native install"
+                "Install the native Claude Code build: acfs update --force --agents-only"
         fi
     else
         # Some other path - just note it
@@ -1060,13 +1060,13 @@ deep_check_agent_auth() {
 check_claude_auth() {
     # Skip if not installed
     if ! command -v claude &>/dev/null; then
-        check "deep.agent.claude_auth" "Claude Code" "warn" "not installed" "curl -fsSL https://claude.ai/install.sh | bash"
+        check "deep.agent.claude_auth" "Claude Code" "warn" "not installed" "acfs update --force --agents-only"
         return
     fi
 
     # Check if binary works
     if ! claude --version &>/dev/null; then
-        check "deep.agent.claude_auth" "Claude Code auth" "fail" "binary error" "Reinstall: curl -fsSL https://claude.ai/install.sh | bash"
+        check "deep.agent.claude_auth" "Claude Code auth" "fail" "binary error" "Reinstall: acfs update --force --agents-only"
         return
     fi
 

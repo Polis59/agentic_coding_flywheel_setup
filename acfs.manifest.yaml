@@ -949,7 +949,11 @@ modules:
           cp "packages/onboard/onboard.sh" ~/.local/bin/onboard
         else
           ACFS_RAW="${ACFS_RAW:-https://raw.githubusercontent.com/Dicklesworthstone/agentic_coding_flywheel_setup/main}"
-          curl -fsSL "${ACFS_RAW}/packages/onboard/onboard.sh" -o ~/.local/bin/onboard
+          CURL_ARGS=(-fsSL)
+          if curl --help all 2>/dev/null | grep -q -- '--proto'; then
+            CURL_ARGS=(--proto '=https' --proto-redir '=https' -fsSL)
+          fi
+          curl "${CURL_ARGS[@]}" "${ACFS_RAW}/packages/onboard/onboard.sh" -o ~/.local/bin/onboard
         fi
         chmod +x ~/.local/bin/onboard
     verify:
@@ -976,7 +980,11 @@ modules:
           cp "scripts/acfs-update" ~/.local/bin/acfs-update
         else
           ACFS_RAW="${ACFS_RAW:-https://raw.githubusercontent.com/Dicklesworthstone/agentic_coding_flywheel_setup/main}"
-          curl -fsSL "${ACFS_RAW}/scripts/acfs-update" -o ~/.local/bin/acfs-update
+          CURL_ARGS=(-fsSL)
+          if curl --help all 2>/dev/null | grep -q -- '--proto'; then
+            CURL_ARGS=(--proto '=https' --proto-redir '=https' -fsSL)
+          fi
+          curl "${CURL_ARGS[@]}" "${ACFS_RAW}/scripts/acfs-update" -o ~/.local/bin/acfs-update
         fi
         chmod +x ~/.local/bin/acfs-update
     verify:
@@ -1003,7 +1011,11 @@ modules:
           cp "scripts/lib/doctor.sh" ~/.local/bin/acfs
         else
           ACFS_RAW="${ACFS_RAW:-https://raw.githubusercontent.com/Dicklesworthstone/agentic_coding_flywheel_setup/main}"
-          curl -fsSL "${ACFS_RAW}/scripts/lib/doctor.sh" -o ~/.local/bin/acfs
+          CURL_ARGS=(-fsSL)
+          if curl --help all 2>/dev/null | grep -q -- '--proto'; then
+            CURL_ARGS=(--proto '=https' --proto-redir '=https' -fsSL)
+          fi
+          curl "${CURL_ARGS[@]}" "${ACFS_RAW}/scripts/lib/doctor.sh" -o ~/.local/bin/acfs
         fi
         chmod +x ~/.local/bin/acfs
     verify:

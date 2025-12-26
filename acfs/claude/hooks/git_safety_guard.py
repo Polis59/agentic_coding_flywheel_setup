@@ -37,10 +37,12 @@ SAFE_PATTERNS = [
     r"git clean -n",              # Dry-run clean
     r"git clean --dry-run",       # Dry-run clean
     r"git push\b.*--force-with-lease",  # Safer force push variant
-    r"rm -rf /tmp/",              # Temp directory cleanup
-    r"rm -rf /var/tmp/",          # Temp directory cleanup
-    r"rm -rf \$TMPDIR/",          # Temp directory cleanup
-    r"rm -rf \${TMPDIR",          # Temp directory cleanup (alternate syntax)
+    # Allow rm -rf on temp directories (ephemeral by design). This includes quoted paths,
+    # flag variations (e.g., -fr), and optional `--` before the path.
+    r"rm\s+-[a-z]*r[a-z]*f[a-z]*(?:\s+--)?\s+['\"]?/tmp/",
+    r"rm\s+-[a-z]*r[a-z]*f[a-z]*(?:\s+--)?\s+['\"]?/var/tmp/",
+    r"rm\s+-[a-z]*r[a-z]*f[a-z]*(?:\s+--)?\s+['\"]?\$TMPDIR/",
+    r"rm\s+-[a-z]*r[a-z]*f[a-z]*(?:\s+--)?\s+['\"]?\${TMPDIR",
 ]
 
 # Patterns that should be BLOCKED

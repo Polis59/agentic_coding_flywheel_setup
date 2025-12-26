@@ -549,14 +549,7 @@ update_agents() {
         return 0
     fi
 
-    local bun_bin="$HOME/.bun/bin/bun"
-
-    if [[ ! -x "$bun_bin" ]]; then
-        log_item "fail" "Bun not installed" "required for agent updates"
-        return 0
-    fi
-
-    # Claude Code - has native update with fallback to reinstall
+    # Claude Code - can update without bun; supports install/reinstall with --force.
     if cmd_exists claude; then
         capture_version_before "claude"
 
@@ -564,7 +557,7 @@ update_agents() {
         if ! run_cmd_claude_update; then
             log_to_file "Claude update failed, attempting reinstall via official installer"
             if update_require_security; then
-                run_cmd "Claude Code (reinstall)" update_run_verified_installer claude
+                run_cmd "Claude Code (reinstall)" update_run_verified_installer claude stable
             else
                 log_item "fail" "Claude Code" "update failed and reinstall unavailable (missing security.sh)"
             fi
@@ -574,8 +567,24 @@ update_agents() {
         if capture_version_after "claude"; then
             [[ "$QUIET" != "true" ]] && echo -e "       ${DIM}${VERSION_BEFORE[claude]} → ${VERSION_AFTER[claude]}${NC}"
         fi
+    elif [[ "$FORCE_MODE" == "true" ]]; then
+        capture_version_before "claude"
+        if update_require_security; then
+            run_cmd "Claude Code (install)" update_run_verified_installer claude stable
+            if capture_version_after "claude"; then
+                [[ "$QUIET" != "true" ]] && echo -e "       ${DIM}${VERSION_BEFORE[claude]} → ${VERSION_AFTER[claude]}${NC}"
+            fi
+        else
+            log_item "fail" "Claude Code" "not installed and install unavailable (missing security.sh)"
+        fi
     else
-        log_item "skip" "Claude Code" "not installed"
+        log_item "skip" "Claude Code" "not installed (use --force to install)"
+    fi
+
+    local bun_bin="$HOME/.bun/bin/bun"
+    if [[ ! -x "$bun_bin" ]]; then
+        log_item "fail" "Bun not installed" "required for Codex/Gemini updates"
+        return 0
     fi
 
     # Codex CLI via bun (--trust allows postinstall scripts)
@@ -1070,10 +1079,17 @@ update_atuin() {
         else
             # Last resort: no checksum verification available
             if [[ "$YES_MODE" == "true" ]]; then
-                log_item "skip" "Atuin" "checksum verification unavailable, use --force to bypass"
+                log_item "skip" "Atuin" "checksum verification unavailable (missing security.sh/checksums.yaml)"
             else
                 log_item "skip" "Atuin" "no self-update command, manual update recommended"
-                log_to_file "Atuin update: install newer version with: curl -fsSL https://setup.atuin.sh | bash"
+                local curl_cmd="curl -fsSL"
+                if command -v curl &>/dev/null && curl --help all 2>/dev/null | grep -q -- '--proto'; then
+                    curl_cmd="curl --proto '=https' --proto-redir '=https' -fsSL"
+                fi
+                log_to_file "Atuin update (manual; review first):"
+                log_to_file "  ${curl_cmd} https://setup.atuin.sh -o /tmp/atuin.install.sh"
+                log_to_file "  sed -n '1,120p' /tmp/atuin.install.sh"
+                log_to_file "  bash /tmp/atuin.install.sh"
             fi
             return 0
         fi
@@ -1098,8 +1114,15 @@ update_zoxide() {
     if update_require_security; then
         run_cmd "Zoxide (reinstall)" update_run_verified_installer zoxide
     else
-        log_item "skip" "Zoxide" "checksum verification unavailable"
-        log_to_file "Zoxide update: install newer version with: curl -fsSL https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | bash"
+        log_item "skip" "Zoxide" "checksum verification unavailable (missing security.sh/checksums.yaml)"
+        local curl_cmd="curl -fsSL"
+        if command -v curl &>/dev/null && curl --help all 2>/dev/null | grep -q -- '--proto'; then
+            curl_cmd="curl --proto '=https' --proto-redir '=https' -fsSL"
+        fi
+        log_to_file "Zoxide update (manual; review first):"
+        log_to_file "  ${curl_cmd} https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh -o /tmp/zoxide.install.sh"
+        log_to_file "  sed -n '1,120p' /tmp/zoxide.install.sh"
+        log_to_file "  bash /tmp/zoxide.install.sh"
         return 0
     fi
 
