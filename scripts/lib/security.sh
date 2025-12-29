@@ -261,7 +261,10 @@ verify_checksum() {
         echo -e "  Actual:   $actual_sha256" >&2
         echo -e "  URL: $url" >&2
         echo -e "  Refusing to execute unverified installer script." >&2
-        echo -e "  Fix: update checksums.yaml (./scripts/lib/security.sh --update-checksums > checksums.yaml)" >&2
+        echo -e "  Fix:" >&2
+        echo -e "    - End users: update ACFS to refresh checksums.yaml (re-run install.sh / update scripts)" >&2
+        echo -e "    - Maintainers: regenerate checksums.yaml with:" >&2
+        echo -e "        ./scripts/lib/security.sh --update-checksums > checksums.yaml" >&2
         return 1
     fi
 
@@ -286,7 +289,10 @@ fetch_and_run() {
         echo -e "${RED}Security Error:${NC} Missing checksum for $name" >&2
         echo -e "  URL: $url" >&2
         echo -e "  Refusing to execute unverified installer script." >&2
-        echo -e "  Fix: update checksums.yaml (./scripts/lib/security.sh --update-checksums > checksums.yaml)" >&2
+        echo -e "  Fix:" >&2
+        echo -e "    - End users: update ACFS to refresh checksums.yaml (re-run install.sh / update scripts)" >&2
+        echo -e "    - Maintainers: regenerate checksums.yaml with:" >&2
+        echo -e "        ./scripts/lib/security.sh --update-checksums > checksums.yaml" >&2
         return 1
     fi
 

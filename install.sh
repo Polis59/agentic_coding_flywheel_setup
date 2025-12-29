@@ -103,9 +103,11 @@ SKIP_UBUNTU_UPGRADE=false
 TARGET_UBUNTU_VERSION="25.10"
 
 # Target user configuration
-# When running as root, we install for ubuntu user, not root
-TARGET_USER="ubuntu"
-TARGET_HOME="/home/$TARGET_USER"
+# Default: install for the "ubuntu" user (typical VPS images).
+# Advanced: override with env vars (see README):
+#   TARGET_USER=myuser TARGET_HOME=/home/myuser ...
+TARGET_USER="${TARGET_USER:-ubuntu}"
+TARGET_HOME="${TARGET_HOME:-/home/$TARGET_USER}"
 
 # Colors
 RED='\033[0;31m'
@@ -1703,7 +1705,8 @@ init_target_paths() {
     if [[ "$(whoami)" == "$TARGET_USER" ]]; then
         TARGET_HOME="$HOME"
     else
-        TARGET_HOME="/home/$TARGET_USER"
+        # Respect an explicit TARGET_HOME env override (default is /home/$TARGET_USER).
+        TARGET_HOME="${TARGET_HOME:-/home/$TARGET_USER}"
     fi
 
     # ACFS directories for target user
@@ -3530,13 +3533,13 @@ run_smoke_test() {
     echo "" >&2
     echo "[Smoke Test]" >&2
 
-    # 1) User is ubuntu
-    if [[ "$TARGET_USER" == "ubuntu" ]] && id "$TARGET_USER" &>/dev/null; then
-        echo "✅ User: ubuntu" >&2
+    # 1) Target user exists
+    if id "$TARGET_USER" &>/dev/null; then
+        echo "✅ User: $TARGET_USER" >&2
         ((critical_passed += 1))
     else
-        echo "✖ User: expected ubuntu (TARGET_USER=$TARGET_USER)" >&2
-        echo "    Fix: set TARGET_USER=ubuntu and ensure the user exists" >&2
+        echo "✖ User: missing (TARGET_USER=$TARGET_USER)" >&2
+        echo "    Fix: set TARGET_USER=<user> and ensure the user exists" >&2
         ((critical_failed += 1))
     fi
 
@@ -3777,9 +3780,9 @@ $tailscale_section
 
 }Next steps:
 
-  1. If you logged in as root, reconnect as ubuntu:
+  1. If you logged in as root, reconnect as $TARGET_USER:
      exit
-     ssh ubuntu@YOUR_SERVER_IP
+     ssh $TARGET_USER@YOUR_SERVER_IP
 
   2. Run the onboarding tutorial:
      onboard
@@ -3830,16 +3833,16 @@ $summary_content"
             # Show SSH key warning if password-only connection was detected
             if [[ "${ACFS_SSH_KEY_WARNING:-false}" == "true" ]]; then
                 echo -e "${RED}════════════════════════════════════════════════════════════${NC}"
-                echo -e "${RED}  ⚠  SSH KEY SETUP REQUIRED FOR UBUNTU USER${NC}"
+                echo -e "${RED}  ⚠  SSH KEY SETUP REQUIRED FOR TARGET USER${NC}"
                 echo -e "${RED}════════════════════════════════════════════════════════════${NC}"
                 echo ""
                 echo -e "  You connected with a password, so no SSH key was copied"
-                echo -e "  to the ubuntu user. You won't be able to SSH as ubuntu"
+                echo -e "  to the $TARGET_USER user. You won't be able to SSH as $TARGET_USER"
                 echo -e "  until you set up SSH key access."
                 echo ""
                 echo -e "  ${YELLOW}FROM YOUR LOCAL MACHINE, run:${NC}"
                 echo ""
-                echo -e "    ${BLUE}ssh-copy-id ubuntu@YOUR_SERVER_IP${NC}"
+                echo -e "    ${BLUE}ssh-copy-id ${TARGET_USER}@YOUR_SERVER_IP${NC}"
                 echo ""
                 echo -e "  Or see the instructions printed earlier for manual setup."
                 echo -e "${RED}════════════════════════════════════════════════════════════${NC}"
@@ -3848,14 +3851,14 @@ $summary_content"
             echo -e "${YELLOW}Next steps:${NC}"
             echo ""
             if [[ "${ACFS_SSH_KEY_WARNING:-false}" == "true" ]]; then
-                echo "  1. Set up SSH key for ubuntu user (see warning above)"
+                echo "  1. Set up SSH key for $TARGET_USER user (see warning above)"
                 echo ""
-                echo "  2. Then reconnect as ubuntu:"
+                echo "  2. Then reconnect as $TARGET_USER:"
             else
-                echo "  1. If you logged in as root, reconnect as ubuntu:"
+                echo "  1. If you logged in as root, reconnect as $TARGET_USER:"
             fi
             echo -e "     ${GRAY}exit${NC}"
-            echo -e "     ${GRAY}ssh ubuntu@YOUR_SERVER_IP${NC}"
+            echo -e "     ${GRAY}ssh ${TARGET_USER}@YOUR_SERVER_IP${NC}"
             echo ""
             local step_num=2
             if [[ "${ACFS_SSH_KEY_WARNING:-false}" == "true" ]]; then
