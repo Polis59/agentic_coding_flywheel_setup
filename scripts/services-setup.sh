@@ -501,10 +501,6 @@ SAFE_PATTERNS=(
   'rm[[:space:]]+-[a-z]*r[a-z]*f[a-z]*([[:space:]]+--)?[[:space:]]+\"/tmp/'
   'rm[[:space:]]+-[a-z]*r[a-z]*f[a-z]*([[:space:]]+--)?[[:space:]]+/var/tmp/'
   'rm[[:space:]]+-[a-z]*r[a-z]*f[a-z]*([[:space:]]+--)?[[:space:]]+\"/var/tmp/'
-  'rm[[:space:]]+-[a-z]*r[a-z]*f[a-z]*([[:space:]]+--)?[[:space:]]+\\$TMPDIR/'
-  'rm[[:space:]]+-[a-z]*r[a-z]*f[a-z]*([[:space:]]+--)?[[:space:]]+\\$\\{TMPDIR'
-  'rm[[:space:]]+-[a-z]*r[a-z]*f[a-z]*([[:space:]]+--)?[[:space:]]+\"\\$TMPDIR/'
-  'rm[[:space:]]+-[a-z]*r[a-z]*f[a-z]*([[:space:]]+--)?[[:space:]]+\"\\$\\{TMPDIR'
 )
 
 for pat in "${SAFE_PATTERNS[@]}"; do
