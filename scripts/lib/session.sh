@@ -706,27 +706,53 @@ export_recent_session() {
 # Returns: ACFS-schema JSON to stdout
 convert_to_acfs_schema() {
     local input="${1:-}"
+    local agent_hint="${2:-}"
     if [[ -z "$input" ]]; then
         return 1
     fi
 
+    # Normalize agent hint (best-effort). CASS exports don't reliably include
+    # an "agent type" field, so callers can pass a hint (e.g., inferred from path).
+    case "$agent_hint" in
+        claude-code|codex|gemini) ;;
+        "") agent_hint="" ;;
+        *) agent_hint="unknown" ;;
+    esac
+
     local filter
     filter="$(
         cat <<'JQ'
+        def messages:
+          [ .[] | select(.type == "user" or .type == "assistant") ];
+
+        def content_to_text:
+          if type == "string" then .
+          elif type == "array" then
+            (
+              [
+                .[]? |
+                if type == "string" then .
+                elif type == "object" then
+                  # Only include user-visible text blocks; exclude "thinking" / tool blocks.
+                  if (.type? // "") == "text" and (.text? | type) == "string" then .text
+                  elif (.type? // "") == "" and (.text? | type) == "string" then .text
+                  else "" end
+                else "" end
+              ] | join("")
+            )
+          else "" end;
+
         {
             schema_version: 1,
             exported_at: (now | todateiso8601),
-            session_id: (.[0].sessionId // "unknown"),
-            agent: (
-              (.[0].agentId // "unknown") as $a |
-              if $a == "claude_code" or $a == "claude-code" then "claude-code"
-              elif $a == "codex" then "codex"
-              elif $a == "gemini" then "gemini"
-              else $a end
+            session_id: (
+              messages as $msgs |
+              ([$msgs[] | .sessionId? | select(type == "string" and length > 0)] | .[0] // "unknown")
             ),
+            agent: ($agent_hint // "unknown"),
             model: (
               [
-                .[] | select((.message.role? // .type? // "") == "assistant") |
+                messages[] | select((.message.role? // .type? // "") == "assistant") |
                 (.message.model? // empty) |
                 select(type == "string" and length > 0)
               ] | .[0] // "unknown"
@@ -734,7 +760,7 @@ convert_to_acfs_schema() {
             summary: "Exported session",
             duration_minutes: 0,
             stats: {
-                turns: (length // 0),
+                turns: (messages | length),
                 files_created: 0,
                 files_modified: 0,
                 commands_run: 0
@@ -742,19 +768,14 @@ convert_to_acfs_schema() {
             outcomes: [],
             key_prompts: [],
             sanitized_transcript: [
-                .[] | {
+                messages[] |
+                {
                     role: (.message.role // .type // "unknown"),
-                    content: (
-                      if (.message.content | type) == "string" then
-                        .message.content
-                      elif (.message.content | type) == "array" then
-                        ([.message.content[]? | if type == "string" then . else (.text? // "") end] | join(""))
-                      else
-                        ""
-                      end
-                    ),
-                    timestamp: .timestamp
-                }
+                    content: (.message.content | content_to_text),
+                    timestamp: (.timestamp // "")
+                } |
+                select(.content | type == "string") |
+                select((.content | length) > 0)
             ]
         }
 JQ
@@ -762,18 +783,18 @@ JQ
 
     # Prefer raw JSON when the argument clearly looks like JSON.
     if [[ "$input" == "{"* || "$input" == "["* ]]; then
-        jq "$filter" 2>/dev/null <<<"$input"
+        jq --arg agent_hint "$agent_hint" "$filter" 2>/dev/null <<<"$input"
         return $?
     fi
 
     # Prefer a readable path (regular file or FIFO like /dev/fd/*).
     if [[ -r "$input" ]]; then
-        jq "$filter" "$input" 2>/dev/null
+        jq --arg agent_hint "$agent_hint" "$filter" "$input" 2>/dev/null
         return $?
     fi
 
     # Fall back to treating the input as raw JSON.
-    jq "$filter" 2>/dev/null <<<"$input"
+    jq --arg agent_hint "$agent_hint" "$filter" 2>/dev/null <<<"$input"
 }
 
 # ============================================================
@@ -782,6 +803,32 @@ JQ
 
 # Default session storage directory
 ACFS_SESSIONS_DIR="${ACFS_SESSIONS_DIR:-${HOME}/.acfs/sessions}"
+
+# Infer agent type from a CASS export JSON file.
+# CASS exports include per-message models (for assistant turns), which is a
+# better signal than the user-chosen export filename/path.
+infer_agent_from_cass_export() {
+    local export_file="${1:-}"
+
+    local model=""
+    model="$(jq -r '([.[] | select(.type == "assistant") | .message.model? | select(type == "string" and length > 0)] | .[0] // "")' "$export_file" 2>/dev/null)" || model=""
+
+    case "${model,,}" in
+        *claude*|*anthropic*) echo "claude-code" ;;
+        *gemini*) echo "gemini" ;;
+        *gpt*|*openai*|*codex*) echo "codex" ;;
+        *)
+            # Last-resort heuristic: some users export files into paths that still include
+            # the agent data directory (e.g., ~/.claude/...).
+            case "$export_file" in
+                *"/.claude/"*) echo "claude-code" ;;
+                *"/.codex/"*) echo "codex" ;;
+                *"/.gemini/"*) echo "gemini" ;;
+                *) echo "unknown" ;;
+            esac
+            ;;
+    esac
+}
 
 # Generate a unique session ID
 generate_session_id() {
@@ -828,17 +875,21 @@ import_session() {
 
     # Detect format
     local is_cass=false is_acfs=false
-    jq -e '.[0].sessionId' "$file" >/dev/null 2>&1 && is_cass=true
-    jq -e '.schema_version' "$file" >/dev/null 2>&1 && is_acfs=true
+    if jq -e 'type == "array"' "$file" >/dev/null 2>&1; then
+        # CASS exports can begin with snapshot/event records before user/assistant messages.
+        # Detect by scanning entries rather than assuming .[0] is a message record.
+        jq -e 'any(.[]?; (.type == "user" or .type == "assistant") and (.sessionId? | type) == "string")' "$file" >/dev/null 2>&1 && is_cass=true
+    fi
+    jq -e 'type == "object" and .schema_version' "$file" >/dev/null 2>&1 && is_acfs=true
 
     # Extract metadata
     local session_id agent turn_count first_ts last_ts
     if [[ "$is_cass" == "true" ]]; then
-        session_id=$(jq -r '.[0].sessionId // "unknown"' "$file")
-        agent=$(jq -r '.[0].agentId // "unknown"' "$file")
-        turn_count=$(jq 'length' "$file")
-        first_ts=$(jq -r '.[0].timestamp // ""' "$file")
-        last_ts=$(jq -r '.[-1].timestamp // ""' "$file")
+        session_id=$(jq -r '([.[] | select(.type == "user" or .type == "assistant") | .sessionId] | map(select(type == "string" and length > 0)) | .[0]) // "unknown"' "$file")
+        agent="$(infer_agent_from_cass_export "$file")"
+        turn_count=$(jq '[.[] | select(.type == "user" or .type == "assistant")] | length' "$file")
+        first_ts=$(jq -r '([.[] | select(.type == "user" or .type == "assistant") | .timestamp] | map(select(type == "string")) | .[0]) // ""' "$file")
+        last_ts=$(jq -r '([.[] | select(.type == "user" or .type == "assistant") | .timestamp] | map(select(type == "string")) | .[-1]) // ""' "$file")
     elif [[ "$is_acfs" == "true" ]]; then
         session_id=$(jq -r '.session_id // "unknown"' "$file")
         agent=$(jq -r '.agent // "unknown"' "$file")
@@ -867,9 +918,55 @@ import_session() {
     local dest="$ACFS_SESSIONS_DIR/${local_id}.json"
 
     if [[ "$is_cass" == "true" ]]; then
-        convert_to_acfs_schema "$file" > "$dest"
+        local tmp_dest
+        tmp_dest=$(mktemp "${ACFS_SESSIONS_DIR}/.${local_id}.XXXXXX.tmp" 2>/dev/null) || {
+            log_error "Failed to create temp file for import in: $ACFS_SESSIONS_DIR"
+            return 1
+        }
+
+        if ! convert_to_acfs_schema "$file" "$agent" > "$tmp_dest"; then
+            rm -f -- "$tmp_dest" 2>/dev/null || true
+            log_error "Failed to convert CASS export to ACFS schema"
+            return 1
+        fi
+
+        # Always sanitize imported output before persisting.
+        if ! sanitize_session_export "$tmp_dest"; then
+            rm -f -- "$tmp_dest" 2>/dev/null || true
+            log_error "Sanitization failed; refusing to import unsanitized session"
+            return 1
+        fi
+
+        if ! mv -- "$tmp_dest" "$dest"; then
+            rm -f -- "$tmp_dest" 2>/dev/null || true
+            log_error "Failed to write imported session: $dest"
+            return 1
+        fi
     else
-        cp -- "$file" "$dest"
+        local tmp_dest
+        tmp_dest=$(mktemp "${ACFS_SESSIONS_DIR}/.${local_id}.XXXXXX.tmp" 2>/dev/null) || {
+            log_error "Failed to create temp file for import in: $ACFS_SESSIONS_DIR"
+            return 1
+        }
+
+        if ! cp -- "$file" "$tmp_dest"; then
+            rm -f -- "$tmp_dest" 2>/dev/null || true
+            log_error "Failed to copy session export into staging file"
+            return 1
+        fi
+
+        # Always sanitize imported output before persisting.
+        if ! sanitize_session_export "$tmp_dest"; then
+            rm -f -- "$tmp_dest" 2>/dev/null || true
+            log_error "Sanitization failed; refusing to import unsanitized session"
+            return 1
+        fi
+
+        if ! mv -- "$tmp_dest" "$dest"; then
+            rm -f -- "$tmp_dest" 2>/dev/null || true
+            log_error "Failed to write imported session: $dest"
+            return 1
+        fi
     fi
 
     echo ""
