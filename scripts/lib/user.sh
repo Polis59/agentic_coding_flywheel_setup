@@ -131,7 +131,34 @@ migrate_ssh_keys() {
         if [[ "${ACFS_CI:-false}" == "true" ]]; then
             log_detail "No SSH keys found to migrate (CI)"
         else
-            log_warn "No SSH keys found to migrate"
+            log_warn "No SSH keys found to migrate to $target user"
+            log_warn "You connected with password - SSH key not configured for $target"
+            echo ""
+            echo "════════════════════════════════════════════════════════════"
+            echo "  ⚠  SSH KEY SETUP REQUIRED FOR UBUNTU USER"
+            echo "════════════════════════════════════════════════════════════"
+            echo ""
+            echo "  You connected with a password, so no SSH key was migrated."
+            echo "  After installation, you'll need to set up SSH access."
+            echo ""
+            echo "  EASIEST FIX - from your LOCAL machine, run:"
+            echo ""
+            echo "    ssh-copy-id ubuntu@YOUR_SERVER_IP"
+            echo ""
+            echo "  Or manually: SSH in as root and run these commands:"
+            echo ""
+            echo "    mkdir -p /home/ubuntu/.ssh"
+            echo "    cat >> /home/ubuntu/.ssh/authorized_keys << 'EOF'"
+            echo "    YOUR_PUBLIC_KEY_HERE"
+            echo "    EOF"
+            echo "    chown -R ubuntu:ubuntu /home/ubuntu/.ssh"
+            echo "    chmod 700 /home/ubuntu/.ssh"
+            echo "    chmod 600 /home/ubuntu/.ssh/authorized_keys"
+            echo ""
+            echo "════════════════════════════════════════════════════════════"
+            echo ""
+            # Set a flag for the final summary
+            export ACFS_SSH_KEY_WARNING="true"
         fi
         return 0
     fi

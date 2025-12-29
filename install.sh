@@ -3720,19 +3720,49 @@ $summary_content"
                 fi
                 echo ""
             fi
+            # Show SSH key warning if password-only connection was detected
+            if [[ "${ACFS_SSH_KEY_WARNING:-false}" == "true" ]]; then
+                echo -e "${RED}════════════════════════════════════════════════════════════${NC}"
+                echo -e "${RED}  ⚠  SSH KEY SETUP REQUIRED FOR UBUNTU USER${NC}"
+                echo -e "${RED}════════════════════════════════════════════════════════════${NC}"
+                echo ""
+                echo -e "  You connected with a password, so no SSH key was copied"
+                echo -e "  to the ubuntu user. You won't be able to SSH as ubuntu"
+                echo -e "  until you set up SSH key access."
+                echo ""
+                echo -e "  ${YELLOW}FROM YOUR LOCAL MACHINE, run:${NC}"
+                echo ""
+                echo -e "    ${BLUE}ssh-copy-id ubuntu@YOUR_SERVER_IP${NC}"
+                echo ""
+                echo -e "  Or see the instructions printed earlier for manual setup."
+                echo -e "${RED}════════════════════════════════════════════════════════════${NC}"
+                echo ""
+            fi
             echo -e "${YELLOW}Next steps:${NC}"
             echo ""
-            echo "  1. If you logged in as root, reconnect as ubuntu:"
+            if [[ "${ACFS_SSH_KEY_WARNING:-false}" == "true" ]]; then
+                echo "  1. Set up SSH key for ubuntu user (see warning above)"
+                echo ""
+                echo "  2. Then reconnect as ubuntu:"
+            else
+                echo "  1. If you logged in as root, reconnect as ubuntu:"
+            fi
             echo -e "     ${GRAY}exit${NC}"
             echo -e "     ${GRAY}ssh ubuntu@YOUR_SERVER_IP${NC}"
             echo ""
-            echo "  2. Run the onboarding tutorial:"
+            local step_num=2
+            if [[ "${ACFS_SSH_KEY_WARNING:-false}" == "true" ]]; then
+                step_num=3
+            fi
+            echo "  $step_num. Run the onboarding tutorial:"
             echo -e "     ${BLUE}onboard${NC}"
             echo ""
-            echo "  3. Check everything is working:"
+            ((step_num++))
+            echo "  $step_num. Check everything is working:"
             echo -e "     ${BLUE}acfs doctor${NC}"
             echo ""
-            echo "  4. Start your agent cockpit:"
+            ((step_num++))
+            echo "  $step_num. Start your agent cockpit:"
             echo -e "     ${BLUE}ntm${NC}"
             echo ""
             echo -e "${GREEN}╚════════════════════════════════════════════════════════════╝${NC}"
