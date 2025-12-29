@@ -28,7 +28,7 @@
 #   --only <module>       Only run a specific module (repeatable)
 #   --only-phase <phase>  Only run modules in a specific phase (repeatable)
 #   --skip <module>       Skip a specific module (repeatable)
-#   --no-deps             Disable dependency closure (expert/debug)
+#   --no-deps             Disable automatic dependency closure (expert/debug)
 # ============================================================
 
 set -euo pipefail
@@ -1225,7 +1225,7 @@ bootstrap_repo_archive() {
     done < <(find "$tmp_dir" -type f -name "*.sh" -print0)
 
     if [[ "$shellcheck_failed" == "true" ]]; then
-        log_error "Bootstrap validation failed. Retry or pin to a known-good tag/sha."
+        log_error "Bootstrap validation failed. Retry or pin ACFS_REF to a known-good tag/sha."
         return 1
     fi
 
@@ -2159,6 +2159,10 @@ normalize_user() {
                 [[ -n "$line" ]] || continue
                 if grep -Fxq "$line" "$dst" 2>/dev/null; then
                     continue
+                fi
+                # Ensure destination file ends with newline before appending
+                if [[ -s "$dst" ]] && [[ -n "$(tail -c 1 "$dst")" ]]; then
+                    echo "" >> "$dst"
                 fi
                 printf "%s\n" "$line" >> "$dst"
             done < "$src"
@@ -3357,14 +3361,15 @@ finalize() {
         "05_ntm_core.md"
         "06_ntm_command_palette.md"
         "07_flywheel_loop.md"
+        "08_keeping_updated.md"
     )
     local lesson
     for lesson in "${lesson_files[@]}"; do
-        install_asset "acfs/onboard/lessons/$lesson" "$ACFS_HOME/onboard/lessons/$lesson"
+        try_step "Installing onboard lesson: $lesson" install_asset "acfs/onboard/lessons/$lesson" "$ACFS_HOME/onboard/lessons/$lesson" || return 1
     done
 
     log_detail "Installing onboard command"
-    try_step "Installing onboard script" install_asset "scripts/onboard/onboard.sh" "$ACFS_HOME/onboard/onboard.sh" || return 1
+    try_step "Installing onboard script" install_asset "packages/onboard/onboard.sh" "$ACFS_HOME/onboard/onboard.sh" || return 1
     try_step "Setting onboard permissions" $SUDO chmod 755 "$ACFS_HOME/onboard/onboard.sh" || return 1
     try_step "Setting onboard ownership" $SUDO chown -R "$TARGET_USER:$TARGET_USER" "$ACFS_HOME/onboard" || return 1
 

@@ -192,6 +192,13 @@ migrate_ssh_keys() {
         if $SUDO grep -Fxq "$line" "$target_keys" 2>/dev/null; then
             continue
         fi
+
+        # Ensure target file ends with a newline before appending.
+        if $SUDO bash -c "[[ -s \"$target_keys\" ]] && [[ -n \"\$(tail -c 1 \"$target_keys\")\" ]]"; then
+            # File has content and last char is not newline
+            printf '\n' | $SUDO tee -a "$target_keys" >/dev/null
+        fi
+
         if ! printf '%s\n' "$line" | $SUDO tee -a "$target_keys" >/dev/null; then
             log_error "Failed to append SSH key to: $target_keys"
             return 1
@@ -349,7 +356,13 @@ prompt_ssh_key() {
     # 7. Install the key
     mkdir -p /root/.ssh
     chmod 700 /root/.ssh
-    echo "$pubkey" >> "$authorized_keys"
+
+    # Ensure authorized_keys ends with a newline before appending.
+    if [[ -s "$authorized_keys" ]] && [[ -n "$(tail -c 1 "$authorized_keys")" ]]; then
+        printf '\n' >> "$authorized_keys"
+    fi
+
+    printf '%s\n' "$pubkey" >> "$authorized_keys"
     chmod 600 "$authorized_keys"
 
     log_success "SSH key installed successfully"

@@ -149,11 +149,29 @@ if ! declare -f show_progress_header >/dev/null; then
         fi
 
         # Print progress header (box is 65 chars wide, content is 63 chars)
-        # NOTE: Progress line assumes single-digit phase numbers (1-9). ACFS has 9 phases.
         echo "" >&2
         echo "╔═══════════════════════════════════════════════════════════════╗" >&2
-        printf "║  Progress: [%s] %3d%%  (%d/%d)                 ║\n" \
-               "$bar" "$percent" "$current" "$total" >&2
+        # Progress line: "  Progress: [bar] 100%  (9/9)                 "
+        # We need to ensure the right padding adapts to the length of (current/total).
+        # Fixed width for the progress text part: 20 (bar) + 6 (percent) + variable (counts)
+        # Using printf * after the bar to pad the rest of the line.
+        
+        # Construct the progress detail string first: " 100%  (9/9)"
+        local prog_detail
+        printf -v prog_detail " %3d%%  (%d/%d)" "$percent" "$current" "$total"
+        
+        # Calculate padding needed to fill the rest of the 63-char content area minus "  Progress: [" and "]"
+        # "  Progress: [" is 13 chars. "]" is 1 char. Total 14 chars.
+        # Bar is 20 chars.
+        # 63 - 14 - 20 = 29 chars remaining for prog_detail + padding.
+        local detail_len=${#prog_detail}
+        local pad_len=$((29 - detail_len))
+        local padding=""
+        if [[ $pad_len -gt 0 ]]; then
+            padding=$(printf "%${pad_len}s" "")
+        fi
+
+        echo -e "║  Progress: [${bar}]${prog_detail}${padding} ║" >&2
         printf "║  Current:  %-50s ║\n" "$display_name" >&2
         printf "║  Elapsed:  %3dm %02ds                                           ║\n" \
                "$elapsed_min" "$elapsed_sec" >&2
@@ -177,7 +195,20 @@ if ! declare -f show_completion >/dev/null; then
         echo "║              ✓ Installation Complete!                         ║" >&2
         echo "╠═══════════════════════════════════════════════════════════════╣" >&2
         printf "║  Total time: %3dm %02ds                                         ║\n" "$min" "$sec" >&2
-        printf "║  Phases completed: %d/%d                                        ║\n" "$total" "$total" >&2
+        
+        # Dynamic padding for "Phases completed: X/Y"
+        # Label "  Phases completed: " is 20 chars.
+        # Box width 63 chars. Remaining: 43 chars.
+        local counts
+        counts="$total/$total"
+        local counts_len=${#counts}
+        local pad_len=$((43 - counts_len))
+        local padding=""
+        if [[ $pad_len -gt 0 ]]; then
+            padding=$(printf "%${pad_len}s" "")
+        fi
+        
+        echo -e "║  Phases completed: ${counts}${padding}║" >&2
         echo "║                                                               ║" >&2
         echo "║  NEXT STEPS:                                                  ║" >&2
         echo "║  1. Type 'exit' to disconnect                                 ║" >&2
