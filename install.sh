@@ -1673,6 +1673,22 @@ acfs_chown_tree() {
         fi
     fi
 
+    # Guardrail: prevent catastrophic recursive chown if a caller misconfigures
+    # TARGET_HOME (or other paths) to a system directory.
+    #
+    # If you *really* need to chown one of these paths, you can override with:
+    #   ACFS_ALLOW_UNSAFE_CHOWN=1
+    if [[ "${ACFS_ALLOW_UNSAFE_CHOWN:-0}" != "1" ]]; then
+        local unsafe_prefix=""
+        for unsafe_prefix in /etc /usr /bin /sbin /lib /lib64 /boot /proc /sys /dev /run /var /opt; do
+            if [[ "$resolved" == "$unsafe_prefix" || "$resolved" == "$unsafe_prefix/"* ]]; then
+                log_error "acfs_chown_tree: refusing to chown unsafe system path: $resolved"
+                log_error "If you intended this (rare), re-run with ACFS_ALLOW_UNSAFE_CHOWN=1"
+                return 1
+            fi
+        done
+    fi
+
     # GNU coreutils: -h = do not dereference symlinks; -R = recursive.
     $SUDO chown -hR "$owner_group" "$resolved"
 }
