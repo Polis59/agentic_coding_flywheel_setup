@@ -590,9 +590,12 @@ check_ntm_cass_compat() {
     [[ -n "$ntm_semver" ]] || return 0
     [[ "$ntm_semver" == "1.2.0" ]] || return 0
 
+    # Test with an actual subcommand invocation, not just --help.
+    # `cass robot --help` may succeed on newer CASS (shows search help),
+    # but that doesn't mean `cass robot search "..."` works.
     local output=""
     local status=0
-    output="$(cass robot --help 2>&1)" || status=$?
+    output="$(cass robot search --dry-run "acfs-wrapper-test" 2>&1)" || status=$?
 
     if (( status == 0 )); then
         check "stack.ntm_cass_compat" "NTM↔CASS compatibility" "pass" "ok"
@@ -608,9 +611,9 @@ check_ntm_cass_compat() {
 
     local first_line=""
     first_line="$(printf '%s\n' "$output" | head -n 1)"
-    [[ -z "$first_line" ]] && first_line="cass robot --help failed"
+    [[ -z "$first_line" ]] && first_line="cass robot search --dry-run failed"
     check "stack.ntm_cass_compat" "NTM↔CASS compatibility" "warn" "could not verify ($first_line)" \
-        "Try: cass robot --help"
+        "Try: cass robot search --dry-run test"
 }
 
 # Check identity

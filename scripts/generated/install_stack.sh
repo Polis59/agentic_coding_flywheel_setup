@@ -488,7 +488,10 @@ install_stack_cass() {
 # Install a small compatibility wrapper for older tooling (e.g., NTM v1.2.0)
 # that expects `cass robot <subcommand>`. Modern CASS uses `cass <subcommand> --robot`.
 # Best-effort: never fail install if we cannot write the wrapper.
-if cass robot --help >/dev/null 2>&1; then
+# Note: `cass robot --help` may succeed on newer CASS (shows search help),
+# but that doesn't mean `cass robot search "..."` works. We need to test
+# an actual subcommand invocation to be sure.
+if cass robot search --dry-run "acfs-wrapper-test" >/dev/null 2>&1; then
   exit 0
 fi
 
@@ -598,7 +601,7 @@ then
 fi
 chmod +x "$cass_path" 2>/dev/null || true
 
-if ! cass robot --help >/dev/null 2>&1; then
+if ! cass robot search --dry-run "acfs-wrapper-test" >/dev/null 2>&1; then
   echo "WARN: cass wrapper installed, but cass robot still failing" >&2
 fi
 
@@ -623,10 +626,10 @@ INSTALL_STACK_CASS
         fi
     fi
     if [[ "${DRY_RUN:-false}" = "true" ]]; then
-        log_info "dry-run: verify (optional): cass robot --help (target_user)"
+        log_info "dry-run: verify (optional): cass robot search --dry-run \"acfs-wrapper-test\" (target_user)"
     else
         if ! run_as_target_shell <<'INSTALL_STACK_CASS'
-cass robot --help
+cass robot search --dry-run "acfs-wrapper-test"
 INSTALL_STACK_CASS
         then
             log_warn "Optional verify failed: stack.cass"

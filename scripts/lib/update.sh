@@ -1024,8 +1024,13 @@ update_go() {
 ensure_cass_robot_compat_wrapper() {
     cmd_exists cass || return 0
 
-    # Nothing to do if cass already supports `robot` subcommand.
-    if cass robot --help >/dev/null 2>&1; then
+    # Check if CASS properly supports `cass robot <subcommand>` syntax.
+    # Note: `cass robot --help` may succeed on newer CASS (shows search help),
+    # but that doesn't mean `cass robot search "..."` works. We need to test
+    # an actual subcommand invocation to be sure.
+    # Test with `cass robot search --dry-run "test"` which should work if
+    # CASS truly supports the robot prefix syntax that NTM expects.
+    if cass robot search --dry-run "acfs-wrapper-test" >/dev/null 2>&1; then
         return 0
     fi
 
@@ -1133,7 +1138,7 @@ exec "$real" "$@"
 EOF
     chmod +x "$cass_path" 2>/dev/null || true
 
-    if cass robot --help >/dev/null 2>&1; then
+    if cass robot search --dry-run "acfs-wrapper-test" >/dev/null 2>&1; then
         log_item "ok" "CASS robot wrapper" "installed"
     else
         log_item "warn" "CASS robot wrapper" "installed but cass robot still failing"

@@ -3527,7 +3527,11 @@ install_stack_phase() {
         log_detail "Ensuring CASS 'robot' compatibility wrapper"
         # Best-effort: do not fail the full install if we cannot write a wrapper.
         run_as_target_shell <<'ACFS_CASS_ROBOT_COMPAT' || log_warn "CASS 'robot' wrapper setup failed (ntm send may still fail)"
-if cass robot --help >/dev/null 2>&1; then
+# Check if CASS properly supports `cass robot <subcommand>` syntax.
+# Note: `cass robot --help` may succeed on newer CASS (shows search help),
+# but that doesn't mean `cass robot search "..."` works. We need to test
+# an actual subcommand invocation to be sure.
+if cass robot search --dry-run "acfs-wrapper-test" >/dev/null 2>&1; then
   exit 0
 fi
 
@@ -3635,7 +3639,7 @@ EOF
 chmod +x "$cass_path" 2>/dev/null || true
 
 # Smoke check; do not fail if it still errors (wrapper is best-effort).
-if ! cass robot --help >/dev/null 2>&1; then
+if ! cass robot search --dry-run "acfs-wrapper-test" >/dev/null 2>&1; then
   echo "WARN: cass wrapper installed, but cass robot still failing" >&2
 fi
 

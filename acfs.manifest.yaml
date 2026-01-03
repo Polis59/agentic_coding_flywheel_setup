@@ -917,7 +917,10 @@ modules:
         # Install a small compatibility wrapper for older tooling (e.g., NTM v1.2.0)
         # that expects `cass robot <subcommand>`. Modern CASS uses `cass <subcommand> --robot`.
         # Best-effort: never fail install if we cannot write the wrapper.
-        if cass robot --help >/dev/null 2>&1; then
+        # Note: `cass robot --help` may succeed on newer CASS (shows search help),
+        # but that doesn't mean `cass robot search "..."` works. We need to test
+        # an actual subcommand invocation to be sure.
+        if cass robot search --dry-run "acfs-wrapper-test" >/dev/null 2>&1; then
           exit 0
         fi
 
@@ -1027,14 +1030,14 @@ modules:
         fi
         chmod +x "$cass_path" 2>/dev/null || true
 
-        if ! cass robot --help >/dev/null 2>&1; then
+        if ! cass robot search --dry-run "acfs-wrapper-test" >/dev/null 2>&1; then
           echo "WARN: cass wrapper installed, but cass robot still failing" >&2
         fi
 
         exit 0
     verify:
       - cass --help || cass --version
-      - cass robot --help || true
+      - cass robot search --dry-run "acfs-wrapper-test" || true
 
   - id: stack.cm
     description: Procedural memory for agents (cass-memory)
