@@ -9,7 +9,7 @@ on:
       - 'acfs.manifest.yaml'
       - 'checksums.yaml'
       - 'packages/manifest/**'
-      - '.github/workflows/installer.yml'
+      - '.github/workflows/*.yml'
       - '.shellcheckrc'
       - 'tests/**/*.sh'
   pull_request:
@@ -20,11 +20,45 @@ on:
       - 'acfs.manifest.yaml'
       - 'checksums.yaml'
       - 'packages/manifest/**'
-      - '.github/workflows/installer.yml'
+      - '.github/workflows/*.yml'
       - '.shellcheckrc'
       - 'tests/**/*.sh'
 
 jobs:
+  yaml-lint:
+    name: Workflow YAML Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install yamllint
+        run: pip install yamllint
+
+      - name: Lint workflow YAML files
+        run: |
+          # Create minimal config that catches critical YAML syntax errors
+          cat > /tmp/yamllint.yml << 'EOF'
+          extends: default
+          rules:
+            line-length:
+              max: 200
+            key-ordering: disable
+            comments:
+              min-spaces-from-content: 1
+            document-start: disable
+            document-end: disable
+            indentation:
+              spaces: 2
+              indent-sequences: whatever
+            truthy:
+              allowed-values: ['true', 'false', 'on', 'off']
+          EOF
+
+          echo "Validating YAML syntax for all workflow files..."
+          yamllint -c /tmp/yamllint.yml .github/workflows/*.yml
+          echo "✅ All workflow YAML files have valid syntax"
+
   shellcheck:
     name: ShellCheck
     runs-on: ubuntu-latest
