@@ -403,7 +403,7 @@ async function generateRecommendations(): Promise<void> {
      Then update analytics.ts to track these on session_start
 
   🔧 NEXT STEPS:
-     1. Run: bun run scripts/configure-ga4.ts (adds missing dimensions)
+     1. Run: bun run scripts/fix-ga4-settings.ts (adds missing dimensions)
      2. Verify Google Signals is enabled in GA4 Admin UI
      3. Wait 24-48 hours for data to accumulate
      4. Re-run this diagnostic to verify improvements
