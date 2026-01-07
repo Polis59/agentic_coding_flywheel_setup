@@ -9,6 +9,18 @@ tests/
 │   ├── lib/                 # Tests for scripts/lib/*.sh
 │   │   └── test_newproj_logging.bats
 │   └── newproj/             # Tests for newproj TUI wizard
+├── e2e/                     # End-to-end tests (bats + expect)
+│   ├── test_helper.bash     # E2E-specific utilities
+│   ├── lib/                 # E2E library (TUI driver, etc.)
+│   │   └── tui_driver.sh    # TUI automation driver
+│   ├── expect/              # Expect scripts for full TUI testing
+│   │   ├── happy_path.exp   # Full wizard walkthrough
+│   │   ├── navigation.exp   # Back/forward navigation
+│   │   └── error_handling.exp
+│   ├── test_happy_path.bats # Happy path E2E tests
+│   ├── test_terminal_compat.bats # Terminal compatibility
+│   ├── test_navigation.bats # Navigation and error recovery
+│   └── run_e2e.sh           # E2E test runner
 ├── fixtures/                # Test fixtures
 │   ├── sample_projects/     # Mock project directories
 │   └── expected_outputs/    # Golden files for comparison
@@ -34,6 +46,47 @@ bats --verbose-run tests/unit/**/*.bats
 
 # Run with TAP output (for CI)
 bats --tap tests/unit/**/*.bats
+```
+
+### End-to-End Tests (E2E)
+
+E2E tests verify the complete TUI wizard workflow. They work in two modes:
+- **CLI mode**: Tests CLI functionality without TTY (always works)
+- **Expect mode**: Full interactive TUI testing (requires `expect`)
+
+```bash
+# Run all E2E tests
+./tests/e2e/run_e2e.sh
+
+# Quick mode (CLI tests only, no expect required)
+./tests/e2e/run_e2e.sh --quick
+
+# Install expect and run all tests
+./tests/e2e/run_e2e.sh --with-expect
+
+# Run specific test file
+./tests/e2e/run_e2e.sh test_happy_path
+
+# Run directly with bats
+bats tests/e2e/test_happy_path.bats
+```
+
+#### E2E Test Categories
+
+| File | Description |
+|------|-------------|
+| `test_happy_path.bats` | Normal successful workflow |
+| `test_terminal_compat.bats` | Different TERM types, unicode, colors |
+| `test_navigation.bats` | Back/forward, edit mode, error recovery |
+
+#### Installing Expect
+
+```bash
+# Ubuntu/Debian
+sudo apt install expect
+
+# macOS
+brew install expect
 ```
 
 ### Integration Tests
@@ -129,4 +182,21 @@ Tests run automatically on:
 Required checks:
 - `shellcheck` on all *.sh files
 - `bats tests/unit/**/*.bats` passes
+- `./tests/e2e/run_e2e.sh --quick` passes
 - Integration test passes (on schedule)
+
+### E2E Tests in CI
+
+E2E tests run in quick mode (CLI tests only) by default in CI:
+
+```yaml
+# Example GitHub Actions
+- name: Run E2E tests
+  run: ./tests/e2e/run_e2e.sh --quick
+
+# With expect (requires expect installation)
+- name: Install expect
+  run: sudo apt-get install -y expect
+- name: Run full E2E tests
+  run: ./tests/e2e/run_e2e.sh
+```
