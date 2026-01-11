@@ -217,4 +217,4 @@ onboard 8
 
 ---
 
-*The Agentic Coding Flywheel Setup - github.com/Dicklesworthstone/agentic_coding_flywheel_setup*
+*The Agentic Coding Flywheel Setup - https://github.com/Dicklesworthstone/agentic_coding_flywheel_setup*

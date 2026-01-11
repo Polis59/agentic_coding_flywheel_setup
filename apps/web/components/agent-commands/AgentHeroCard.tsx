@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { Copy, Check, ChevronDown, Terminal } from "lucide-react";
 import { motion, AnimatePresence, springs } from "@/components/motion";
 import { cn } from "@/lib/utils";
+import { useReducedMotion } from "@/lib/hooks/useReducedMotion";
 
 export type AgentType = "claude" | "codex" | "gemini";
 
@@ -77,6 +78,7 @@ export function AgentHeroCard({
   const [isHovered, setIsHovered] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
   const personality = agentPersonalities[agent.id];
+  const prefersReducedMotion = useReducedMotion();
 
   // Handle keyboard number navigation
   useEffect(() => {
@@ -188,8 +190,8 @@ export function AgentHeroCard({
           <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/20 text-2xl font-bold text-white backdrop-blur-sm shadow-lg shadow-white/10">
             {agent.icon}
           </div>
-          {/* Animated ring - pulses on hover */}
-          {isHovered && (
+          {/* Animated ring - pulses on hover (respects reduced motion) */}
+          {isHovered && !prefersReducedMotion && (
             <motion.div
               className="absolute -inset-1.5 rounded-2xl border-2 border-white/50"
               initial={{ scale: 1, opacity: 0.8 }}

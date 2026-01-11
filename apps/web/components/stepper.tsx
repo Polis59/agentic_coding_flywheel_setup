@@ -10,6 +10,7 @@ import {
   type WizardStep,
 } from "@/lib/wizardSteps";
 import { motion } from "@/components/motion";
+import { useReducedMotion } from "@/lib/hooks/useReducedMotion";
 
 export interface StepperProps {
   /** Current active step (1-indexed) */
@@ -158,6 +159,7 @@ export function StepperMobile({
   className,
 }: StepperProps) {
   const [completedSteps] = useCompletedSteps();
+  const prefersReducedMotion = useReducedMotion();
 
   const currentStepData = WIZARD_STEPS.find((s) => s.id === currentStep);
   const progress = (currentStep / WIZARD_STEPS.length) * 100;
@@ -242,8 +244,8 @@ export function StepperMobile({
                 transition={{ type: "spring", stiffness: 400, damping: 25 }}
               />
 
-              {/* Active step pulse ring */}
-              {isActive && (
+              {/* Active step pulse ring (respects reduced motion) */}
+              {isActive && !prefersReducedMotion && (
                 <motion.div
                   className="absolute rounded-full border-2 border-primary/50"
                   initial={{ width: 14, height: 14, opacity: 0.8 }}
