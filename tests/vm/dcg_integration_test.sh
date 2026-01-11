@@ -44,7 +44,7 @@ test_dcg_hook_registered() {
     local doctor_output
     doctor_output=$(dcg doctor 2>&1) || true
 
-    if echo "$doctor_output" | grep -q "hook wiring.*OK"; then
+    if echo "$doctor_output" | grep -qi "hook wiring.*OK"; then
         harness_pass "DCG hook is registered"
         return 0
     else

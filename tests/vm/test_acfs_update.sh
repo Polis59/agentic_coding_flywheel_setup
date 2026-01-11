@@ -311,7 +311,7 @@ test_dcg_update() {
     local hook_before
     local doctor_output
     doctor_output=$(dcg doctor 2>&1) || true
-    if echo "$doctor_output" | grep -q "hook wiring.*OK"; then
+    if echo "$doctor_output" | grep -qi "hook wiring.*OK"; then
         hook_before="registered"
     else
         hook_before="unknown"
@@ -330,7 +330,7 @@ test_dcg_update() {
     # Get hook status after
     local hook_after
     doctor_output=$(dcg doctor 2>&1) || true
-    if echo "$doctor_output" | grep -q "hook wiring.*OK"; then
+    if echo "$doctor_output" | grep -qi "hook wiring.*OK"; then
         hook_after="registered"
     else
         hook_after="unknown"

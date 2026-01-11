@@ -217,7 +217,7 @@ test_reinstall_idempotent() {
     # Hook should still be registered (use text parsing since JSON output not supported)
     local doctor_output
     doctor_output=$(dcg doctor 2>&1) || true
-    if echo "$doctor_output" | grep -q "hook wiring.*OK"; then
+    if echo "$doctor_output" | grep -qi "hook wiring.*OK"; then
         pass "Hook still registered after reinstall"
     else
         skip "Hook registration status unclear after reinstall"
@@ -374,7 +374,7 @@ test_uninstall_reinstall_cycle() {
     # Verify hook works again (use text parsing since JSON output not supported)
     local doctor_output
     doctor_output=$(dcg doctor 2>&1) || true
-    if echo "$doctor_output" | grep -q "hook wiring.*OK"; then
+    if echo "$doctor_output" | grep -qi "hook wiring.*OK"; then
         pass "Hook re-registered after reinstall"
     else
         skip "Hook registration status after cycle unclear"
@@ -688,7 +688,7 @@ test_checkpoint_state_consistency() {
     local doctor_output
     doctor_output=$(dcg doctor 2>&1) || true
 
-    if echo "$doctor_output" | grep -q "hook wiring.*OK\|registered"; then
+    if echo "$doctor_output" | grep -qi "hook wiring.*OK\|registered"; then
         pass "Hook correctly re-registered after cycle"
     else
         skip "Hook registration status after cycle unclear"
