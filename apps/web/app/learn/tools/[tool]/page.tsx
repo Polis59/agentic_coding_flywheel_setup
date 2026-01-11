@@ -9,6 +9,7 @@ import {
   Bot,
   ChevronRight,
   GitBranch,
+  GitMerge,
   GraduationCap,
   Home,
   KeyRound,
@@ -34,7 +35,8 @@ type ToolId =
   | "cm"
   | "caam"
   | "slb"
-  | "dcg";
+  | "dcg"
+  | "ru";
 
 type ToolCard = {
   id: ToolId;
@@ -193,6 +195,18 @@ const TOOLS: Record<ToolId, ToolCard> = {
     docsLabel: "GitHub",
     quickCommand: "dcg test 'rm -rf /' --explain",
     relatedTools: ["slb", "claude-code", "ntm"],
+  },
+  ru: {
+    id: "ru",
+    title: "Repo Updater",
+    tagline: "Multi-repo sync + AI-driven commit automation",
+    icon: <GitMerge className="h-8 w-8" />,
+    gradient: "from-indigo-500/20 via-blue-500/20 to-indigo-500/20",
+    glowColor: "rgba(99,102,241,0.4)",
+    docsUrl: "https://github.com/Dicklesworthstone/repo_updater",
+    docsLabel: "GitHub",
+    quickCommand: "ru sync --parallel 4",
+    relatedTools: ["ntm", "beads", "agent-mail"],
   },
 };
 
