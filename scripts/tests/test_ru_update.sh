@@ -51,7 +51,7 @@ test_update_sh_has_ru() {
 test_get_version_ru() {
     local update_sh="$REPO_ROOT/scripts/lib/update.sh"
     # Source update.sh and check for get_version function
-    if grep -q "get_version" "$update_sh" 2>/dev/null; then
+    if command grep -q "get_version" "$update_sh" 2>/dev/null; then
         # Check if ru is in the case statement
         command grep -A50 "get_version" "$update_sh" | command grep -q "ru" 2>/dev/null || return 0
         return 0

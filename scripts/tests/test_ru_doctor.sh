@@ -44,7 +44,8 @@ test_doctor_sh_syntax() {
 test_doctor_checks_has_ru() {
     local doctor_checks="$REPO_ROOT/scripts/generated/doctor_checks.sh"
     if [[ -f "$doctor_checks" ]]; then
-        grep -q "ru\|stack_ru\|check_ru" "$doctor_checks" 2>/dev/null
+        # Use command grep to avoid rg alias; check for ru in any form
+        command grep -q "ru" "$doctor_checks" 2>/dev/null
     else
         log_skip "doctor_checks.sh not found"
         return 0
@@ -55,7 +56,8 @@ test_doctor_checks_has_ru() {
 test_manifest_index_has_ru() {
     local manifest_index="$REPO_ROOT/scripts/generated/manifest_index.sh"
     if [[ -f "$manifest_index" ]]; then
-        grep -q "stack\.ru\|ru" "$manifest_index" 2>/dev/null
+        # Use command grep to avoid rg alias
+        command grep -q "ru" "$manifest_index" 2>/dev/null
     else
         log_skip "manifest_index.sh not found"
         return 0
@@ -113,7 +115,8 @@ test_acfs_doctor_has_ru() {
     if command -v acfs &>/dev/null; then
         local doctor_output
         doctor_output=$(acfs doctor 2>&1) || true
-        if echo "$doctor_output" | grep -qi "ru\|repo.updater"; then
+        # Use command grep to avoid rg alias
+        if echo "$doctor_output" | command grep -qi "ru"; then
             return 0
         else
             log_skip "acfs doctor doesn't mention ru (may be OK)"

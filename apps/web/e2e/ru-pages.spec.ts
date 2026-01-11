@@ -95,7 +95,7 @@ test.describe.serial("RU Website Pages", () => {
       await page.waitForLoadState("networkidle");
 
       // Check RU appears somewhere on the landing page
-      const ruMention = page.getByText(/RU|Repo Updater/i).first();
+      const ruMention = page.getByText(/\bRU\b|Repo Updater/i).first();
       await expect(ruMention).toBeVisible();
     });
   });
@@ -106,7 +106,7 @@ test.describe.serial("RU Website Pages", () => {
       await page.waitForLoadState("networkidle");
 
       // Check RU is in the stack visualization
-      const ruMention = page.getByText(/RU|Repo Updater/i).first();
+      const ruMention = page.getByText(/\bRU\b|Repo Updater/i).first();
       await expect(ruMention).toBeVisible();
     });
 
@@ -176,26 +176,24 @@ test.describe.serial("RU Website Pages", () => {
       await page.goto("/learn");
       await page.waitForLoadState("networkidle");
 
-      // Find and click link to RU
-      const ruLink = page.getByRole("link", { name: /RU|Repo/i }).first();
-      if (await ruLink.isVisible()) {
-        await ruLink.click();
-        await page.waitForLoadState("networkidle");
-        await expect(page).toHaveURL(/ru/i);
-      }
+      // Find and click link to RU - the link should exist
+      const ruLink = page.getByRole("link", { name: /\bRU\b|Repo Updater/i }).first();
+      await expect(ruLink).toBeVisible({ timeout: 5000 });
+      await ruLink.click();
+      await page.waitForLoadState("networkidle");
+      await expect(page).toHaveURL(/ru/i);
     });
 
     test("can navigate from flywheel to RU details", async ({ page }) => {
       await page.goto("/flywheel");
       await page.waitForLoadState("networkidle");
 
-      // Find RU in the flywheel visualization and interact
-      const ruElement = page.getByText(/RU|Repo Updater/i).first();
-      if (await ruElement.isVisible()) {
-        await ruElement.click();
-        // After clicking, some detail should appear
-        await expect(page.getByText(/sync|multi.*repo/i).first()).toBeVisible();
-      }
+      // Find RU in the flywheel visualization - it should exist
+      const ruElement = page.getByText(/\bRU\b|Repo Updater/i).first();
+      await expect(ruElement).toBeVisible({ timeout: 5000 });
+      await ruElement.click();
+      // After clicking, some detail should appear
+      await expect(page.getByText(/sync|multi.*repo/i).first()).toBeVisible();
     });
   });
 
