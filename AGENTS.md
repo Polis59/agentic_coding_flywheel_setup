@@ -769,7 +769,7 @@ enabled = ["database.postgresql", "containers.docker", "kubernetes"]
 - When blocked, explain to user why the command is dangerous
 - Suggest safer alternatives (e.g., `--force-with-lease` instead of `--force`)
 - Never try to bypass DCG—ask user to run dangerous commands manually
-- DCG is sub-50ms latency, designed to not slow down your workflow
+- DCG has sub-millisecond latency, designed to not slow down your workflow
 
 ---
 

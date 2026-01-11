@@ -22,7 +22,8 @@ test.describe.serial("DCG Website Pages", () => {
       await expect(page.locator("h1").first()).toBeVisible();
 
       // Verify key sections exist
-      await expect(page.getByText(/installation/i).first()).toBeVisible();
+      await expect(page.getByText(/quick start/i).first()).toBeVisible();
+      await expect(page.getByText(/uninstallation/i).first()).toBeVisible();
 
       // No JS errors should have occurred
       expect(errors).toEqual([]);
@@ -33,7 +34,7 @@ test.describe.serial("DCG Website Pages", () => {
       await page.waitForLoadState("networkidle");
 
       // Check for code blocks
-      const codeBlocks = page.locator("pre code");
+      const codeBlocks = page.locator("pre");
       const count = await codeBlocks.count();
       expect(count).toBeGreaterThan(0);
     });
@@ -53,7 +54,7 @@ test.describe.serial("DCG Website Pages", () => {
         errors.push(`Page Error: ${error.message}`);
       });
 
-      await page.goto("/learn/lessons/dcg");
+      await page.goto("/learn/dcg");
       await page.waitForLoadState("networkidle");
 
       // Check lesson content loads
@@ -64,7 +65,7 @@ test.describe.serial("DCG Website Pages", () => {
     });
 
     test("DCG lesson has interactive elements", async ({ page }) => {
-      await page.goto("/learn/lessons/dcg");
+      await page.goto("/learn/dcg");
       await page.waitForLoadState("networkidle");
 
       // Check for buttons or interactive elements
@@ -73,6 +74,9 @@ test.describe.serial("DCG Website Pages", () => {
       );
       const count = await interactiveElements.count();
       expect(count).toBeGreaterThan(0);
+
+      const copyButtons = page.getByRole("button", { name: /copy/i });
+      await expect(copyButtons.first()).toBeVisible();
     });
   });
 

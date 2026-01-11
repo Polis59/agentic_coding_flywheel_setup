@@ -3548,6 +3548,9 @@ gemini  # Follow Google login flow
 4. **Reinstall if binary is missing**:
    ```bash
    which dcg  # Should return a path
+   # If missing, reinstall:
+   curl -fsSL "https://raw.githubusercontent.com/Dicklesworthstone/destructive_command_guard/main/install.sh" | bash
+   dcg install  # Register hook after reinstall
    ```
 
 ### Complete Reset
