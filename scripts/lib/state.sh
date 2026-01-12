@@ -547,8 +547,13 @@ state_phase_complete() {
     # Calculate duration if start time was recorded
     local start_time duration
     start_time=$(echo "$state" | jq -r '.phase_start_time // empty')
-    if [[ -n "$start_time" ]]; then
+    # Validate start_time is a valid integer before arithmetic to handle corrupted state
+    if [[ -n "$start_time" && "$start_time" =~ ^[0-9]+$ ]]; then
         duration=$(($(date +%s) - start_time))
+        # Protect against negative duration (clock skew or corrupted timestamp)
+        if [[ "$duration" -lt 0 ]]; then
+            duration=0
+        fi
     else
         duration=0
     fi
@@ -674,7 +679,10 @@ state_is_phase_completed() {
         state=$(state_load) || return 1
         echo "$state" | jq -e --arg phase "$phase_id" '.completed_phases | index($phase) != null' &>/dev/null
     else
-        [[ "$completed" == *"$phase_id"* ]]
+        # Fallback: Check for exact match with JSON quote boundaries to avoid
+        # false positives (e.g., "base" matching "database"). The completed
+        # value is a JSON array string like '["user_setup", "filesystem"]'.
+        [[ "$completed" == *"\"$phase_id\""* ]]
     fi
 }
 
