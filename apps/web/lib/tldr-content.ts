@@ -38,7 +38,7 @@ export const tldrFlywheelTools: TldrFlywheelTool[] = [
     icon: "Mail",
     color: "from-violet-500 to-purple-600",
     category: "core",
-    stars: 1400,
+    stars: 1433,
     whatItDoes:
       "A mail-like coordination layer for multi-agent workflows. Agents send messages, read threads, and reserve files asynchronously via MCP tools - like Gmail for AI coding agents.",
     whyItsUseful:
@@ -84,7 +84,7 @@ export const tldrFlywheelTools: TldrFlywheelTool[] = [
     icon: "GitBranch",
     color: "from-emerald-500 to-teal-600",
     category: "core",
-    stars: 891,
+    stars: 927,
     whatItDoes:
       "A fast terminal UI for viewing and analyzing Beads issues. Applies graph theory (PageRank, betweenness centrality, critical path) to identify which tasks unblock the most other work.",
     whyItsUseful:
@@ -130,7 +130,7 @@ export const tldrFlywheelTools: TldrFlywheelTool[] = [
     icon: "Search",
     color: "from-cyan-500 to-sky-600",
     category: "core",
-    stars: 307,
+    stars: 312,
     whatItDoes:
       "Blazing-fast search across all your past AI coding agent sessions. Indexes conversations from Claude Code, Codex, Cursor, Gemini, ChatGPT and more with sub-millisecond query times.",
     whyItsUseful:
@@ -176,7 +176,7 @@ export const tldrFlywheelTools: TldrFlywheelTool[] = [
     icon: "Cog",
     color: "from-purple-500 to-violet-600",
     category: "core",
-    stars: 234,
+    stars: 692,
     whatItDoes:
       "One-command bootstrap that transforms a fresh Ubuntu VPS into a fully-configured agentic coding environment with all flywheel tools installed.",
     whyItsUseful:
@@ -264,7 +264,7 @@ export const tldrFlywheelTools: TldrFlywheelTool[] = [
     icon: "ShieldAlert",
     color: "from-red-500 to-rose-600",
     category: "core",
-    stars: 89,
+    stars: 22,
     whatItDoes:
       "Intercepts dangerous shell commands (rm -rf, git reset --hard, etc.) before execution. Requires confirmation for destructive operations.",
     whyItsUseful:
@@ -306,7 +306,7 @@ export const tldrFlywheelTools: TldrFlywheelTool[] = [
     icon: "RefreshCw",
     color: "from-orange-500 to-amber-600",
     category: "core",
-    stars: 67,
+    stars: 29,
     whatItDoes:
       "Keeps dozens (or hundreds) of Git repositories in sync with a single command. Clones missing repos, pulls updates, detects conflicts.",
     whyItsUseful:
@@ -395,7 +395,7 @@ export const tldrFlywheelTools: TldrFlywheelTool[] = [
     icon: "LayoutGrid",
     color: "from-sky-500 to-blue-600",
     category: "core",
-    stars: 69,
+    stars: 71,
     whatItDoes:
       "Manages named tmux sessions with project-specific persistence. Creates organized workspaces for multi-agent development with typed panes.",
     whyItsUseful:
@@ -492,7 +492,7 @@ export const tldrFlywheelTools: TldrFlywheelTool[] = [
     icon: "Image",
     color: "from-slate-500 to-gray-600",
     category: "supporting",
-    stars: 24,
+    stars: 21,
     whatItDoes:
       "Downloads images from iCloud public share links for use in remote debugging sessions. Converts iCloud URLs to direct image downloads.",
     whyItsUseful:
@@ -534,7 +534,7 @@ export const tldrFlywheelTools: TldrFlywheelTool[] = [
     icon: "Archive",
     color: "from-blue-500 to-indigo-600",
     category: "supporting",
-    stars: 156,
+    stars: 25,
     whatItDoes:
       "Ultra-fast search over X/Twitter data archives. Uses hybrid BM25 + semantic search with Reciprocal Rank Fusion.",
     whyItsUseful:
@@ -576,7 +576,7 @@ export const tldrFlywheelTools: TldrFlywheelTool[] = [
     icon: "FileCode",
     color: "from-green-500 to-emerald-600",
     category: "supporting",
-    stars: 78,
+    stars: 8,
     whatItDoes:
       "Terminal UI for combining source code files into LLM-ready prompts. Select files, preview output, copy to clipboard with token counting.",
     whyItsUseful:
@@ -620,7 +620,7 @@ export const tldrPageData = {
       "10 core tools and 3 supporting utilities that transform multi-agent AI coding workflows. Each tool makes the others more powerful - the more you use it, the faster it spins. While others argue about agentic coding, we're just over here building as fast as we can.",
     stats: [
       { label: "Ecosystem Tools", value: "13" },
-      { label: "GitHub Stars", value: "3,600+" },
+      { label: "GitHub Stars", value: "3,800+" },
       { label: "Languages", value: "5" },
     ],
   },

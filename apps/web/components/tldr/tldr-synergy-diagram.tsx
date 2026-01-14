@@ -109,13 +109,13 @@ export function TldrSynergyDiagram({
           {/* All gradient definitions */}
           <defs>
             <radialGradient id="centerGlow" cx="50%" cy="50%" r="50%">
-              <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.2" />
-              <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0" />
+              <stop offset="0%" stopColor="var(--primary)" stopOpacity="0.2" />
+              <stop offset="100%" stopColor="var(--primary)" stopOpacity="0" />
             </radialGradient>
             <linearGradient id="lineGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.5" />
-              <stop offset="50%" stopColor="hsl(var(--primary))" stopOpacity="0.8" />
-              <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0.5" />
+              <stop offset="0%" stopColor="var(--primary)" stopOpacity="0.5" />
+              <stop offset="50%" stopColor="var(--primary)" stopOpacity="0.8" />
+              <stop offset="100%" stopColor="var(--primary)" stopOpacity="0.5" />
             </linearGradient>
             {/* Tool-specific gradients */}
             {coreTools.map((tool) => (
@@ -174,8 +174,8 @@ export function TldrSynergyDiagram({
               cx="200"
               cy="200"
               r="35"
-              fill="hsl(var(--card))"
-              stroke="hsl(var(--primary) / 0.3)"
+              fill="var(--card)"
+              stroke="color-mix(in oklch, var(--primary) 30%, transparent)"
               strokeWidth="2"
             />
             <text
@@ -222,8 +222,8 @@ export function TldrSynergyDiagram({
                   cx={pos.x}
                   cy={pos.y}
                   r={nodeRadius}
-                  fill="hsl(var(--card))"
-                  stroke="hsl(var(--border) / 0.5)"
+                  fill="var(--card)"
+                  stroke="color-mix(in oklch, var(--border) 50%, transparent)"
                   strokeWidth="1"
                   className="transition-all duration-300 hover:stroke-border"
                 />
