@@ -15,7 +15,8 @@ export const alt = "ACFS Learning Hub Lesson";
 export default async function Image({ params }: { params: { slug: string } }) {
   const lesson = getLessonBySlug(params.slug);
   const lessonIndex = LESSONS.findIndex((l) => l.slug === params.slug);
-  const lessonNumber = lessonIndex + 1;
+  // Handle not-found case: show lesson 1 as fallback instead of 0
+  const lessonNumber = lessonIndex >= 0 ? lessonIndex + 1 : 1;
   const totalLessons = LESSONS.length;
   const primaryColor = getLessonColor(params.slug);
 
