@@ -668,6 +668,48 @@ export const tldrFlywheelTools: TldrFlywheelTool[] = [
       "Managing context window budget",
     ],
   },
+  {
+    id: "csctf",
+    name: "Chat Shared Conversation to File",
+    shortName: "CSCTF",
+    href: "https://github.com/Dicklesworthstone/chat_shared_conversation_to_file",
+    icon: "FileText",
+    color: "from-indigo-400 to-violet-500",
+    category: "supporting",
+    stars: 20,
+    whatItDoes:
+      "Converts public ChatGPT, Gemini, Grok, and Claude share links into clean Markdown + HTML transcripts with preserved code fences.",
+    whyItsUseful:
+      "AI conversations are valuable knowledge artifacts, but share links can expire. CSCTF lets you archive important conversations locally with proper formatting, making them searchable and shareable.",
+    implementationHighlights: [
+      "Playwright-based scraping for reliable extraction",
+      "Multi-provider: ChatGPT, Gemini, Grok, Claude",
+      "Deterministic filenames with collision handling",
+      "Optional GitHub Pages publishing",
+    ],
+    synergies: [
+      {
+        toolId: "cass",
+        description: "Archived conversations can be indexed by CASS for search",
+      },
+      {
+        toolId: "cm",
+        description: "Valuable insights from chats can become memories",
+      },
+    ],
+    techStack: ["TypeScript", "Playwright", "Bun"],
+    keyFeatures: [
+      "Multi-provider chat extraction",
+      "Clean Markdown + HTML output",
+      "Syntax-highlighted code blocks",
+      "GitHub Pages publishing",
+    ],
+    useCases: [
+      "Archiving important AI debugging sessions",
+      "Building searchable knowledge base from chats",
+      "Sharing AI solutions with team members",
+    ],
+  },
 ];
 
 export const tldrPageData = {
@@ -675,9 +717,9 @@ export const tldrPageData = {
     title: "The Agentic Coding Flywheel",
     subtitle: "TL;DR Edition",
     description:
-      "11 core tools and 3 supporting utilities that transform multi-agent AI coding workflows. Each tool makes the others more powerful - the more you use it, the faster it spins. While others argue about agentic coding, we're just over here building as fast as we can.",
+      "11 core tools and 4 supporting utilities that transform multi-agent AI coding workflows. Each tool makes the others more powerful - the more you use it, the faster it spins. While others argue about agentic coding, we're just over here building as fast as we can.",
     stats: [
-      { label: "Ecosystem Tools", value: "14" },
+      { label: "Ecosystem Tools", value: "15" },
       { label: "GitHub Stars", value: "3,800+" },
       { label: "Languages", value: "5" },
     ],
@@ -685,7 +727,7 @@ export const tldrPageData = {
   coreDescription:
     "The core flywheel tools form the backbone: Agent Mail for coordination, BV for graph-based prioritization, CASS for instant session search, CM for persistent memory, MS for skill extraction, UBS for bug detection, plus session management, safety guards, and automated setup.",
   supportingDescription:
-    "Supporting tools extend the ecosystem: GIIL for remote image debugging, XF for searching your X archive, and S2P for crafting prompts from source code.",
+    "Supporting tools extend the ecosystem: GIIL for remote image debugging, XF for searching your X archive, S2P for crafting prompts from source code, and CSCTF for archiving AI conversations.",
   flywheelExplanation: {
     title: "Why a Flywheel?",
     paragraphs: [

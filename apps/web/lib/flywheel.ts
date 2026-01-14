@@ -830,6 +830,41 @@ export const flywheelTools: FlywheelTool[] = [
     installCommand: "cargo install --git https://github.com/Dicklesworthstone/meta_skill",
     language: "Rust",
   },
+  {
+    id: "csctf",
+    name: "Chat Shared Conversation to File",
+    shortName: "CSCTF",
+    href: "https://github.com/Dicklesworthstone/chat_shared_conversation_to_file",
+    icon: "FileText",
+    color: "from-indigo-400 to-violet-500",
+    tagline: "Archive AI conversations",
+    description:
+      "Converts public ChatGPT, Gemini, Grok, and Claude share links into clean Markdown + HTML transcripts with preserved code fences and stable filenames.",
+    deepDescription:
+      "CSCTF uses Playwright to scrape AI chat share pages, extracting conversations with proper code block formatting. Outputs both Markdown and static HTML with syntax highlighting. Optional GitHub Pages publishing for instant sharing.",
+    connectsTo: ["cass"],
+    connectionDescriptions: {
+      cass: "Archived conversations can be indexed by CASS",
+    },
+    stars: 20,
+    features: [
+      "Multi-provider: ChatGPT, Gemini, Grok, Claude",
+      "Accurate Markdown with preserved code fences",
+      "Static HTML twin with syntax highlighting",
+      "Deterministic filenames with collision handling",
+      "Optional GitHub Pages publishing",
+      "Zero-setup: binary releases for all platforms",
+    ],
+    cliCommands: [
+      "csctf 'https://chatgpt.com/share/...'  # Convert to Markdown + HTML",
+      "csctf '...' --md-only                  # Markdown only",
+      "csctf '...' --publish-to-gh-pages      # Publish to GitHub Pages",
+      "csctf '...' --json                     # JSON metadata output",
+    ],
+    installCommand:
+      "curl -fsSL https://raw.githubusercontent.com/Dicklesworthstone/chat_shared_conversation_to_file/main/install.sh | bash",
+    language: "TypeScript",
+  },
 ];
 
 // ============================================================

@@ -98,6 +98,12 @@ export const TAILWIND_GRADIENTS: Record<string, ColorDefinition> = {
     primary: "#14b8a6",
     rgb: "20, 184, 166",
   },
+  "from-indigo-400 to-violet-500": {
+    from: "#818cf8",
+    to: "#8b5cf6",
+    primary: "#818cf8",
+    rgb: "129, 140, 248",
+  },
 };
 
 const DEFAULT_COLOR: ColorDefinition = {

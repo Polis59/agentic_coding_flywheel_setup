@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import {
   Bot,
+  FileText,
   GitBranch,
   GitMerge,
   GraduationCap,
@@ -27,7 +28,8 @@ export type ToolId =
   | "slb"
   | "dcg"
   | "ru"
-  | "ms";
+  | "ms"
+  | "csctf";
 
 export type ToolCard = {
   id: ToolId;
@@ -207,6 +209,18 @@ export const TOOLS: Record<ToolId, ToolCard> = {
     docsLabel: "GitHub",
     quickCommand: "ms search 'error handling'",
     relatedTools: ["cass", "cm", "beads"],
+  },
+  csctf: {
+    id: "csctf",
+    title: "Chat Shared Conversation to File",
+    tagline: "Archive AI chat share links to Markdown + HTML",
+    icon: <FileText className="h-8 w-8" aria-hidden="true" />,
+    gradient: "from-indigo-500/20 via-violet-500/20 to-indigo-500/20",
+    glowColor: "rgba(99,102,241,0.4)",
+    docsUrl: "https://github.com/Dicklesworthstone/chat_shared_conversation_to_file",
+    docsLabel: "GitHub",
+    quickCommand: "csctf 'https://chatgpt.com/share/...'",
+    relatedTools: ["cass", "cm"],
   },
 };
 
