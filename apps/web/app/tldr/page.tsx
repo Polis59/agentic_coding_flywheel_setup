@@ -103,7 +103,7 @@ function FooterCTA({ id }: { id?: string }) {
           One command, 30 minutes, and you&apos;re ready to go.
         </p>
         <div className="mt-6 flex flex-col items-center gap-4 md:mt-8">
-          <div className="group relative w-full max-w-4xl">
+          <div className="group relative w-full max-w-6xl">
             <div className="overflow-x-auto rounded-xl bg-card/80 ring-1 ring-border/50 transition-all duration-200 hover:ring-primary/30">
               <div className="flex items-center justify-between gap-4 px-4 py-3 sm:px-6 sm:py-4">
                 <code className="flex-1 whitespace-nowrap font-mono text-xs text-primary sm:text-sm md:text-base">
