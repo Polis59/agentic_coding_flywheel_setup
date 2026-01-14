@@ -672,8 +672,9 @@ export const trackSessionStart = (): void => {
     is_first_visit: isFirstVisit,
   });
 
-  // Check for returning user
-  const visitCount = parseInt(safeGetItem('acfs_visit_count') || '0', 10) + 1;
+  // Check for returning user (with NaN protection for corrupted localStorage)
+  const rawVisitCount = parseInt(safeGetItem('acfs_visit_count') || '0', 10);
+  const visitCount = (Number.isFinite(rawVisitCount) && rawVisitCount >= 0 ? rawVisitCount : 0) + 1;
   safeSetItem('acfs_visit_count', String(visitCount));
 
   // Set comprehensive user properties
