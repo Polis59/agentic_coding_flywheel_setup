@@ -1532,6 +1532,8 @@ acfs_parse_checksums_content() {
     local content="$1"
     local in_installers=false
     local current_tool=""
+    local indent_len=0
+    local tool_indent=-1
 
     # Clear existing entries for fresh parse
     ACFS_UPSTREAM_URLS=()
@@ -1541,27 +1543,50 @@ acfs_parse_checksums_content() {
         [[ "$line" =~ ^[[:space:]]*# ]] && continue
         [[ -z "${line// }" ]] && continue
 
+        # Detect indentation of current line
+        local indent="${line%%[^ ]*}"
+        indent_len="${#indent}"
+
         if [[ "$line" =~ ^installers: ]]; then
             in_installers=true
+            tool_indent=-1 # Reset tool indent detection
             continue
         fi
         if [[ "$in_installers" != "true" ]]; then
             continue
         fi
 
-        if [[ "$line" =~ ^[[:space:]]{2}([a-z_]+):[[:space:]]*$ ]]; then
-            current_tool="${BASH_REMATCH[1]}"
-            continue
+        # Detect tool name (key under installers:)
+        # Matches: "  toolname:"
+        if [[ "$line" =~ ^[[:space:]]*([a-z0-9_.-]+):[[:space:]]*$ ]]; then
+            # If we haven't established tool indentation yet, set it now
+            if [[ "$tool_indent" -eq -1 ]]; then
+                tool_indent="$indent_len"
+            fi
+
+            # Only treat as a tool definition if it matches the tool indentation level
+            if [[ "$indent_len" -eq "$tool_indent" ]]; then
+                current_tool="${BASH_REMATCH[1]}"
+                continue
+            fi
+        fi
+
+        # Stop parsing tools if we dedent back to or below installers level (0)
+        # (Simple heuristic: installers: is usually at 0)
+        if [[ "$indent_len" -eq 0 ]] && [[ "$in_installers" == "true" ]]; then
+             # If we hit a top-level key like "other:", stop
+             in_installers=false
+             continue
         fi
 
         [[ -n "$current_tool" ]] || continue
 
-        if [[ "$line" =~ url:[[:space:]]*\"([^\"]+)\" ]]; then
+        if [[ "$line" =~ url:[[:space:]]*[\"\']?([^\"\']+)[\"\']? ]]; then
             ACFS_UPSTREAM_URLS["$current_tool"]="${BASH_REMATCH[1]}"
             continue
         fi
 
-        if [[ "$line" =~ sha256:[[:space:]]*\"([a-f0-9]{64})\" ]]; then
+        if [[ "$line" =~ sha256:[[:space:]]*[\"\']?([a-f0-9]{64})[\"\']? ]]; then
             ACFS_UPSTREAM_SHA256["$current_tool"]="${BASH_REMATCH[1]}"
             continue
         fi
@@ -3488,7 +3513,7 @@ NTM_CONFIG_EOF
         log_detail "Installing MCP Agent Mail (in tmux session)"
         # Create or use acfs-services tmux session, run installer in first pane.
         # The installer will start the server, which runs persistently in tmux.
-        local tmux_session="acfs-services"
+        local tmux_session="acfs-install-stack-mcp-agent-mail"
         local tool="mcp_agent_mail"
         local target_dir="$TARGET_HOME/mcp_agent_mail"
 
