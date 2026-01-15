@@ -201,13 +201,13 @@ export const TOOLS: Record<ToolId, ToolCard> = {
   ms: {
     id: "ms",
     title: "Meta Skill",
-    tagline: "Mine CASS sessions into reusable production-grade skills",
+    tagline: "Complete skill management platform with MCP server for AI agents",
     icon: <Sparkles className="h-8 w-8" aria-hidden="true" />,
     gradient: "from-teal-500/20 via-emerald-500/20 to-teal-500/20",
     glowColor: "rgba(20,184,166,0.4)",
     docsUrl: "https://github.com/Dicklesworthstone/meta_skill",
     docsLabel: "GitHub",
-    quickCommand: "ms search 'error handling'",
+    quickCommand: "ms mcp serve",
     relatedTools: ["cass", "cm", "beads"],
   },
   csctf: {
