@@ -268,7 +268,7 @@ export const COMMANDS: CommandRef[] = [
     fullName: "Automated Plan Reviser",
     description: "Automated iterative spec refinement with extended AI reasoning.",
     category: "stack",
-    example: "apr run 5",
+    example: "apr refine plan.md",
     aliases: ["automated-plan-reviser"],
   },
   {
