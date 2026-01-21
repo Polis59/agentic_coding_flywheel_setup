@@ -364,6 +364,49 @@ run_cmd_sudo() {
 }
 
 # ============================================================
+# Checksums Refresh (Auto-update from GitHub)
+# ============================================================
+
+CHECKSUMS_URL="https://raw.githubusercontent.com/Dicklesworthstone/agentic_coding_flywheel_setup/main/checksums.yaml"
+CHECKSUMS_LOCAL="${HOME}/.acfs/checksums.yaml"
+
+# Refresh checksums.yaml from GitHub before verifying installers
+# This ensures we always have the latest checksums without requiring
+# a full ACFS re-install.
+refresh_checksums() {
+    local quiet="${1:-false}"
+
+    # Create directory if needed
+    mkdir -p "$(dirname "$CHECKSUMS_LOCAL")"
+
+    # Download with timeout and retry
+    local tmp_checksums
+    tmp_checksums=$(mktemp "${TMPDIR:-/tmp}/acfs-checksums.XXXXXX")
+
+    if curl -fsSL --connect-timeout 5 --max-time 30 -o "$tmp_checksums" "$CHECKSUMS_URL" 2>/dev/null; then
+        # Validate it looks like a checksums file
+        if grep -q "^installers:" "$tmp_checksums" 2>/dev/null; then
+            mv "$tmp_checksums" "$CHECKSUMS_LOCAL"
+            if [[ "$quiet" != "true" ]]; then
+                log_item "ok" "checksums refresh" "synced from GitHub"
+            fi
+            log_to_file "Refreshed checksums.yaml from $CHECKSUMS_URL"
+            return 0
+        else
+            rm -f "$tmp_checksums"
+            [[ "$quiet" != "true" ]] && log_item "warn" "checksums refresh" "invalid format, using cached"
+            log_to_file "Checksums refresh failed: invalid format"
+            return 1
+        fi
+    else
+        rm -f "$tmp_checksums"
+        [[ "$quiet" != "true" ]] && log_item "warn" "checksums refresh" "network error, using cached"
+        log_to_file "Checksums refresh failed: network error"
+        return 1
+    fi
+}
+
+# ============================================================
 # Upstream installer verification (checksums.yaml)
 # ============================================================
 
@@ -1069,6 +1112,10 @@ update_stack() {
         log_item "skip" "stack update" "disabled (use --stack to enable)"
         return 0
     fi
+
+    # Refresh checksums from GitHub to get latest versions
+    # This prevents checksum mismatch errors when install scripts have been updated
+    refresh_checksums "$QUIET" || true
 
     if ! update_require_security; then
         log_item "fail" "stack updates" "security verification unavailable (missing security.sh/checksums.yaml)"
