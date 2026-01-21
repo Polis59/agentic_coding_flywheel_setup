@@ -849,9 +849,9 @@ export const tldrPageData = {
     title: "The Agentic Coding Flywheel",
     subtitle: "TL;DR Edition",
     description:
-      "11 core tools and 4 supporting utilities that transform multi-agent AI coding workflows. Each tool makes the others more powerful - the more you use it, the faster it spins. While others argue about agentic coding, we're just over here building as fast as we can.",
+      "11 core tools and 7 supporting utilities that transform multi-agent AI coding workflows. Each tool makes the others more powerful - the more you use it, the faster it spins. While others argue about agentic coding, we're just over here building as fast as we can.",
     stats: [
-      { label: "Ecosystem Tools", value: "15" },
+      { label: "Ecosystem Tools", value: "18" },
       { label: "GitHub Stars", value: "3,600+" },
       { label: "Languages", value: "5" },
     ],
@@ -859,7 +859,7 @@ export const tldrPageData = {
   coreDescription:
     "The core flywheel tools form the backbone: Agent Mail for coordination, BV for graph-based prioritization, CASS for instant session search, CM for persistent memory, UBS for bug detection, MS for skill management with MCP integration, plus session management, safety guards, and automated setup.",
   supportingDescription:
-    "Supporting tools extend the ecosystem: GIIL for remote image debugging, SRPS for system responsiveness under heavy load, XF for searching your X archive, and S2P for crafting prompts from source code.",
+    "Supporting tools extend the ecosystem: GIIL for remote image debugging, SRPS for system responsiveness under heavy load, XF for searching your X archive, S2P for crafting prompts from source code, APR for spec refinement, JFP for curated prompt discovery, and PT for process triage.",
   flywheelExplanation: {
     title: "Why a Flywheel?",
     paragraphs: [

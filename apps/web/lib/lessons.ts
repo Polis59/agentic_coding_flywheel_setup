@@ -216,6 +216,14 @@ export const LESSONS: Lesson[] = [
     duration: "8 min",
     file: "23_srps.md",
   },
+  {
+    id: 24,
+    slug: "jfp",
+    title: "JFP: Prompt Library",
+    description: "Discover and install curated prompts as Claude Code skills",
+    duration: "6 min",
+    file: "12_jfp.md",
+  },
 ];
 
 /** Total number of lessons */
