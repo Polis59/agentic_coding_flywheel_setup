@@ -170,6 +170,11 @@ declare -gA KNOWN_INSTALLERS=(
     [slb]="https://raw.githubusercontent.com/Dicklesworthstone/simultaneous_launch_button/main/scripts/install.sh"
     [dcg]="https://raw.githubusercontent.com/Dicklesworthstone/destructive_command_guard/main/install.sh"
     [ru]="https://raw.githubusercontent.com/Dicklesworthstone/repo_updater/main/install.sh"
+    [apr]="https://raw.githubusercontent.com/Dicklesworthstone/automated_plan_reviser_pro/main/install.sh"
+    [ms]="https://raw.githubusercontent.com/Dicklesworthstone/meta_skill/main/scripts/install.sh"
+    [pt]="https://raw.githubusercontent.com/Dicklesworthstone/process_triage/master/install.sh"
+    [srps]="https://raw.githubusercontent.com/Dicklesworthstone/system_resource_protection_script/main/install.sh"
+    [xf]="https://raw.githubusercontent.com/Dicklesworthstone/xf/main/install.sh"
     [giil]="https://raw.githubusercontent.com/Dicklesworthstone/giil/main/install.sh"
     [csctf]="https://raw.githubusercontent.com/Dicklesworthstone/chat_shared_conversation_to_file/main/install.sh"
 )
