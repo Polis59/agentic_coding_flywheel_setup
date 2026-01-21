@@ -4318,10 +4318,7 @@ main() {
     detect_environment
 
     # Source generated installers for manifest-driven execution (mjt.5.6)
-    # Skip when we're only listing/printing plan or running dry-run/print-only modes.
-    if [[ "$LIST_MODULES" != "true" ]] && [[ "$PRINT_PLAN_MODE" != "true" ]] && [[ "$DRY_RUN" != "true" ]] && [[ "$PRINT_MODE" != "true" ]]; then
-        source_generated_installers
-    fi
+    source_generated_installers
 
     # Map legacy --skip-* flags to SKIP_MODULES (mjt.5.5)
     # This allows --skip-postgres, --skip-vault, --skip-cloud to work
