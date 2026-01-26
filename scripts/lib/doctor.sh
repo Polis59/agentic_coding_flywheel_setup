@@ -1900,6 +1900,22 @@ main() {
             echo "Error: services-setup.sh not found" >&2
             return 1
             ;;
+        support-bundle|bundle)
+            shift
+            local support_script=""
+            if [[ -f "$HOME/.acfs/scripts/lib/support.sh" ]]; then
+                support_script="$HOME/.acfs/scripts/lib/support.sh"
+            elif [[ -f "$SCRIPT_DIR/support.sh" ]]; then
+                support_script="$SCRIPT_DIR/support.sh"
+            fi
+
+            if [[ -n "$support_script" ]]; then
+                exec bash "$support_script" "$@"
+            fi
+
+            echo "Error: support.sh not found" >&2
+            return 1
+            ;;
         version|-v|--version)
             local version_file=""
             if [[ -f "$HOME/.acfs/VERSION" ]]; then
