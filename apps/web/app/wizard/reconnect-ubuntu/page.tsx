@@ -172,9 +172,7 @@ export default function ReconnectUbuntuPage() {
               <p className="mt-3 font-medium text-foreground">
                 If you&apos;re being asked for a password, try connecting as root instead:
               </p>
-              <code className="block rounded bg-muted px-3 py-2 font-mono text-xs mt-2">
-                ssh root@{vpsIP}
-              </code>
+              <CommandCard command={`ssh root@${vpsIP}`} runLocation="local" className="mt-2" />
               <p className="mt-2 text-xs text-muted-foreground">
                 Use the VPS root password (the one from your provider), then re-run the installer.
               </p>

@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { PartyPopper, BookOpen, ExternalLink, Sparkles, ArrowRight, GraduationCap, Terminal, RefreshCw, FolderPlus, FolderOpen } from "lucide-react";
 import { Card } from "@/components/ui/card";
-import { CommandCard } from "@/components/command-card";
+import { CommandCard, CodeBlock } from "@/components/command-card";
 import { AlertCard } from "@/components/alert-card";
 import { markStepComplete, setCompletedSteps, TOTAL_STEPS } from "@/lib/wizardSteps";
 import { trackConversion } from "@/lib/analytics";
@@ -575,12 +575,7 @@ export default function LaunchOnboardingPage() {
             <p className="text-sm text-muted-foreground">
               Add this to your local <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">~/.ssh/config</code> file:
             </p>
-            <pre className="rounded-lg bg-muted p-4 text-sm font-mono overflow-x-auto">
-{`Host myserver
-    HostName ${displayIP}
-    User ubuntu
-    IdentityFile ~/.ssh/acfs_ed25519`}
-            </pre>
+            <CodeBlock code={`Host myserver\n    HostName ${displayIP}\n    User ubuntu\n    IdentityFile ~/.ssh/acfs_ed25519`} language="ssh-config" />
             <p className="text-sm text-muted-foreground">
               Then just type: <code className="rounded bg-muted px-2 py-1 font-mono text-xs">ssh myserver</code>
             </p>

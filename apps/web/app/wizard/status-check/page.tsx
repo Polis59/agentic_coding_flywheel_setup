@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { CommandCard } from "@/components/command-card";
+import { CommandCard, CodeBlock } from "@/components/command-card";
 import { AlertCard, OutputPreview } from "@/components/alert-card";
 import { WhereAmICheck } from "@/components/connection-check";
 import { markStepComplete } from "@/lib/wizardSteps";
@@ -132,9 +132,7 @@ export default function StatusCheckPage() {
           <p className="text-sm">
             If you&apos;re in PowerShell or Terminal on your laptop, first run your SSH command:
           </p>
-          <code className="mt-1 block overflow-x-auto rounded bg-background/50 px-3 py-2 font-mono text-xs">
-            ssh -i ~/.ssh/acfs_ed25519 ubuntu@YOUR_VPS_IP
-          </code>
+          <CommandCard command="ssh -i ~/.ssh/acfs_ed25519 ubuntu@YOUR_VPS_IP" runLocation="local" className="mt-1" />
           <p className="text-sm text-muted-foreground">
             Once you see <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">ubuntu@</code> in your prompt, you&apos;re ready.
           </p>
@@ -281,8 +279,7 @@ export default function StatusCheckPage() {
               <li>Create a token with the permissions you need (e.g., Workers, Pages)</li>
               <li>Add to your <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">~/.zshrc</code>:</li>
             </ol>
-            <pre className="rounded bg-muted p-2 text-xs font-mono mt-1">{`export CLOUDFLARE_API_TOKEN="your-token-here"
-export CLOUDFLARE_ACCOUNT_ID="your-account-id"`}</pre>
+            <CodeBlock code={`export CLOUDFLARE_API_TOKEN="your-token-here"\nexport CLOUDFLARE_ACCOUNT_ID="your-account-id"`} language="bash" className="mt-1" />
             <p className="text-xs text-muted-foreground mt-1">
               Then run <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">source ~/.zshrc</code> or start a new shell.
             </p>
@@ -301,7 +298,7 @@ export CLOUDFLARE_ACCOUNT_ID="your-account-id"`}</pre>
                 <li>Go to <a href="https://supabase.com/dashboard/account/tokens" target="_blank" rel="noopener noreferrer" className="text-primary underline">Supabase → Access Tokens</a></li>
                 <li>Create a token, then add to <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">~/.zshrc</code>:</li>
               </ol>
-              <pre className="rounded bg-muted p-2 text-xs font-mono">{`export SUPABASE_ACCESS_TOKEN="your-token-here"`}</pre>
+              <CodeBlock code={`export SUPABASE_ACCESS_TOKEN="your-token-here"`} language="bash" />
 
               <p className="font-medium mt-2">Vercel:</p>
               <ol className="list-decimal list-inside space-y-1 pl-2 text-sm">
@@ -458,9 +455,7 @@ export CLOUDFLARE_ACCOUNT_ID="your-account-id"`}</pre>
                   This usually means your shell config hasn&apos;t loaded yet. Run this command
                   to reload it:
                 </p>
-                <code className="mt-1 block overflow-x-auto rounded bg-muted px-2 py-1 font-mono text-xs">
-                  source ~/.zshrc
-                </code>
+                <CommandCard command="source ~/.zshrc" runLocation="vps" className="mt-1" />
                 <p className="mt-1 text-sm text-muted-foreground">
                   Then try the doctor command again.
                 </p>
@@ -471,9 +466,7 @@ export CLOUDFLARE_ACCOUNT_ID="your-account-id"`}</pre>
                 <p className="text-sm text-muted-foreground">
                   You can try re-running the installer. It&apos;s safe to run multiple times:
                 </p>
-                <code className="mt-1 block overflow-x-auto rounded bg-muted px-2 py-1 font-mono text-xs">
-                  curl -fsSL &quot;https://raw.githubusercontent.com/Dicklesworthstone/agentic_coding_flywheel_setup/main/install.sh&quot; | bash -s -- --yes --mode vibe
-                </code>
+                <CommandCard command='curl -fsSL "https://raw.githubusercontent.com/Dicklesworthstone/agentic_coding_flywheel_setup/main/install.sh" | bash -s -- --yes --mode vibe' runLocation="vps" className="mt-1" />
               </div>
 
               <div>
