@@ -29,7 +29,9 @@ fi
 # Configuration
 # ============================================================
 VERBOSE=false
+REDACT=true
 OUTPUT_BASE="${ACFS_HOME}/support"
+REDACTION_COUNT=0
 
 # ============================================================
 # Parse arguments
@@ -44,14 +46,20 @@ while [[ $# -gt 0 ]]; do
             OUTPUT_BASE="$2"
             shift 2
             ;;
+        --no-redact)
+            REDACT=false
+            shift
+            ;;
         --help|-h)
             echo "Usage: acfs support-bundle [options]"
             echo ""
             echo "Collect diagnostic data into a tarball for troubleshooting."
+            echo "Sensitive data (API keys, tokens, secrets) is redacted by default."
             echo ""
             echo "Options:"
             echo "  --verbose, -v    Show detailed output during collection"
             echo "  --output, -o DIR Output directory (default: ~/.acfs/support)"
+            echo "  --no-redact      Disable secret redaction (WARNING: bundle may contain secrets)"
             echo "  --help, -h       Show this help"
             echo ""
             echo "Output:"
@@ -276,6 +284,8 @@ write_manifest() {
         --arg bundle_dir "$(basename "$bundle_dir")" \
         --argjson files "$files_json" \
         --argjson file_count "${#BUNDLE_FILES[@]}" \
+        --argjson redaction_enabled "$( [[ "$REDACT" == "true" ]] && echo true || echo false )" \
+        --argjson redaction_files_modified "$REDACTION_COUNT" \
         '{
             schema_version: $schema_version,
             created_at: $created_at,
@@ -283,8 +293,87 @@ write_manifest() {
             acfs_version: $acfs_version,
             bundle_id: $bundle_dir,
             file_count: $file_count,
-            files: $files
+            files: $files,
+            redaction: {
+                enabled: $redaction_enabled,
+                files_modified: $redaction_files_modified,
+                patterns: ["api_key", "aws_key", "github_token", "github_pat", "vault_token", "slack_token", "bearer", "jwt", "password", "generic_secret"]
+            }
         }' > "$manifest_file" 2>/dev/null || return 1
+}
+
+# ============================================================
+# Redaction
+# ============================================================
+
+# Redact sensitive values from a single text file in-place.
+# Increments REDACTION_COUNT for each substitution made.
+# Usage: redact_file <file_path>
+redact_file() {
+    local file="$1"
+
+    # Skip binary files (check first 512 bytes for null bytes)
+    if head -c 512 "$file" 2>/dev/null | grep -qP '\x00'; then
+        return 0
+    fi
+
+    # Count lines before redaction for diff
+    local before_hash
+    before_hash=$(md5sum "$file" 2>/dev/null | awk '{print $1}') || return 0
+
+    # Apply redaction patterns using sed -E (extended regex)
+    # Order: specific patterns first, then generic catch-alls
+    sed -E -i \
+        -e 's/sk-[a-zA-Z0-9_-]{20,}/<REDACTED:api_key>/g' \
+        -e 's/AKIA[A-Z0-9]{16}/<REDACTED:aws_key>/g' \
+        -e 's/ghp_[a-zA-Z0-9]{36,}/<REDACTED:github_token>/g' \
+        -e 's/ghs_[a-zA-Z0-9]{36,}/<REDACTED:github_token>/g' \
+        -e 's/github_pat_[a-zA-Z0-9_]{22,}/<REDACTED:github_pat>/g' \
+        -e 's/hvs\.[a-zA-Z0-9]{20,}/<REDACTED:vault_token>/g' \
+        -e 's/xox[bpsar]-[a-zA-Z0-9-]{10,}/<REDACTED:slack_token>/g' \
+        -e 's/Bearer [a-zA-Z0-9._\/-]{10,}/Bearer <REDACTED:bearer>/g' \
+        -e 's/eyJ[a-zA-Z0-9_-]{10,}\.[a-zA-Z0-9_-]{10,}\.[a-zA-Z0-9_-]{10,}/<REDACTED:jwt>/g' \
+        "$file" 2>/dev/null || return 0
+
+    # Generic key=value secrets (case-insensitive would need per-line processing;
+    # instead match common casings)
+    sed -E -i \
+        -e 's/(api_key|API_KEY|ApiKey|api_secret|API_SECRET|secret_key|SECRET_KEY|access_token|ACCESS_TOKEN|refresh_token|REFRESH_TOKEN|auth_token|AUTH_TOKEN|client_secret|CLIENT_SECRET|private_key|PRIVATE_KEY)([=:]["'"'"']?)([^ "'"'"'\n]{8,})/\1\2<REDACTED:\1>/g' \
+        -e 's/(password|PASSWORD|passwd|PASSWD)([=:]["'"'"']?)([^ "'"'"'\n]{4,})/\1\2<REDACTED:password>/g' \
+        "$file" 2>/dev/null || return 0
+
+    # Check if file changed
+    local after_hash
+    after_hash=$(md5sum "$file" 2>/dev/null | awk '{print $1}') || return 0
+    if [[ "$before_hash" != "$after_hash" ]]; then
+        ((REDACTION_COUNT++))
+    fi
+}
+
+# Walk all files in the bundle directory and apply redaction.
+# Usage: redact_bundle <bundle_dir>
+redact_bundle() {
+    local bundle_dir="$1"
+
+    if [[ "$REDACT" != "true" ]]; then
+        log_warn "Redaction disabled (--no-redact). Bundle may contain secrets."
+        return 0
+    fi
+
+    log_detail "Redacting sensitive data..."
+
+    local file_count=0
+    while IFS= read -r file; do
+        redact_file "$file"
+        ((file_count++))
+    done < <(find "$bundle_dir" -type f \( \
+        -name '*.json' -o -name '*.log' -o -name '*.txt' \
+        -o -name '*.yaml' -o -name '*.yml' -o -name '*.sh' \
+        -o -name '*.zshrc' -o -name '.zshrc' \
+        -o -name 'os-release' -o -name 'VERSION' \
+        \) 2>/dev/null)
+
+    [[ "$VERBOSE" == "true" ]] && log_detail "Scanned $file_count files, redacted $REDACTION_COUNT"
 }
 
 # ============================================================
@@ -371,6 +460,9 @@ main() {
     if [[ -f "$ACFS_HOME/acfs.manifest.yaml" ]]; then
         collect_file "$ACFS_HOME/acfs.manifest.yaml" "$bundle_dir/config" "acfs.manifest.yaml"
     fi
+
+    # --- Redact sensitive data ---
+    redact_bundle "$bundle_dir"
 
     # --- Write manifest ---
     log_detail "Writing manifest..."
