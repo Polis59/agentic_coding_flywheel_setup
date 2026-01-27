@@ -61,7 +61,8 @@ if ! declare -f acfs_log_close >/dev/null 2>&1; then
 
         if [[ -n "${ACFS_LOG_FILE:-}" ]] && [[ -f "$ACFS_LOG_FILE" ]]; then
             # Strip ANSI escape codes for clean log
-            sed -i $'s/\033\[[0-9;]*m//g' "$ACFS_LOG_FILE" 2>/dev/null || true
+            # Use -i.bak for portability (works on both GNU sed and BSD sed)
+            sed -i.bak $'s/\033\[[0-9;]*m//g' "$ACFS_LOG_FILE" 2>/dev/null && rm -f "${ACFS_LOG_FILE}.bak" || true
 
             # Append footer
             {
@@ -314,7 +315,14 @@ fi
 if ! declare -f timer_end >/dev/null; then
     timer_end() {
         local name="$1"
-        local start="${ACFS_TIMERS[$name]:-$(date +%s)}"
+        local start="${ACFS_TIMERS[$name]:-}"
+
+        # If timer was never started, warn and skip duration logging
+        if [[ -z "$start" ]]; then
+            log_detail "Completed (no timing data)"
+            return 0
+        fi
+
         local end
         end=$(date +%s)
         local duration=$((end - start))

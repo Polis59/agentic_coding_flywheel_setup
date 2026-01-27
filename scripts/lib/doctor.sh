@@ -772,9 +772,9 @@ check_shell() {
     fi
 
     if [[ -d "$plugins_dir/zsh-syntax-highlighting" ]]; then
-        check "shell.plugins.zsh_syntax_highlightinging" "zsh-syntax-highlighting" "pass"
+        check "shell.plugins.zsh_syntax_highlighting" "zsh-syntax-highlighting" "pass"
     else
-        check "shell.plugins.zsh_syntax_highlightinging" "zsh-syntax-highlighting" "warn" "not installed" \
+        check "shell.plugins.zsh_syntax_highlighting" "zsh-syntax-highlighting" "warn" "not installed" \
             "git clone https://github.com/zsh-users/zsh-syntax-highlighting \${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting"
     fi
 

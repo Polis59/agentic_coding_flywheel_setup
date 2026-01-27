@@ -59,17 +59,19 @@ fsync_file() {
     local file_path="$1"
 
     # Method 1: Use Python for true fsync (most reliable)
+    # Pass path via sys.argv to avoid shell injection with special characters
     if command -v python3 &>/dev/null; then
-        python3 -c "
-import os
-fd = os.open('$file_path', os.O_RDONLY)
+        python3 - "$file_path" <<'PYEOF' 2>/dev/null && return 0
+import os, sys
+file_path = sys.argv[1]
+fd = os.open(file_path, os.O_RDONLY)
 os.fsync(fd)
 os.close(fd)
 # Also sync the directory to ensure filename is durable
-dir_fd = os.open('$(dirname "$file_path")', os.O_RDONLY)
+dir_fd = os.open(os.path.dirname(file_path), os.O_RDONLY)
 os.fsync(dir_fd)
 os.close(dir_fd)
-" 2>/dev/null && return 0
+PYEOF
     fi
 
     # Method 2: Use dd with fsync flag
@@ -87,13 +89,15 @@ os.close(dir_fd)
 fsync_directory() {
     local dir_path="$1"
 
+    # Pass path via sys.argv to avoid shell injection with special characters
     if command -v python3 &>/dev/null; then
-        python3 -c "
-import os
-fd = os.open('$dir_path', os.O_RDONLY)
+        python3 - "$dir_path" <<'PYEOF' 2>/dev/null && return 0
+import os, sys
+dir_path = sys.argv[1]
+fd = os.open(dir_path, os.O_RDONLY)
 os.fsync(fd)
 os.close(fd)
-" 2>/dev/null && return 0
+PYEOF
     fi
 
     sync
@@ -592,7 +596,7 @@ undo_change() {
     # Check dependencies (things that depend on this must be undone first)
     if [[ "$skip_deps" != "true" ]]; then
         local dependents
-        dependents=$(grep "$ACFS_CHANGES_FILE" -e "\"depends_on\".*$change_id" 2>/dev/null | jq -r '.id' 2>/dev/null || true)
+        dependents=$(grep -e "\"depends_on\".*$change_id" "$ACFS_CHANGES_FILE" 2>/dev/null | jq -r '.id' 2>/dev/null || true)
         for dep in $dependents; do
             local dep_undone
             dep_undone=$(grep "\"id\":\"$dep\"" "$ACFS_CHANGES_FILE" | tail -1 | jq -r '.undone')
@@ -616,17 +620,17 @@ undo_change() {
     log_info "[UNDO] Reverting: $description"
 
     # Verify backups are intact
-    local backups
-    backups=$(echo "$record" | jq -c '.backups[]?' 2>/dev/null || true)
-    for backup in $backups; do
-        if [[ -n "$backup" ]] && ! verify_backup_integrity "$backup"; then
+    local backup
+    while IFS= read -r backup; do
+        [[ -z "$backup" ]] && continue
+        if ! verify_backup_integrity "$backup"; then
             if [[ "$force" != "true" ]]; then
                 log_error "Backup verification failed. Use --force to override."
                 return 1
             fi
             log_warn "Forcing undo despite backup verification failure"
         fi
-    done
+    done < <(echo "$record" | jq -c '.backups[]?' 2>/dev/null)
 
     # Execute undo
     local undo_exit_code=0
