@@ -451,7 +451,7 @@ dispatch_fix() {
             fix_plugin_clone "$check_id" "zsh-autosuggestions" \
                 "https://github.com/zsh-users/zsh-autosuggestions"
             ;;
-        shell.plugins.zsh_syntax_highlightinging)
+        shell.plugins.zsh_syntax_highlighting)
             fix_plugin_clone "$check_id" "zsh-syntax-highlighting" \
                 "https://github.com/zsh-users/zsh-syntax-highlighting"
             ;;
