@@ -377,8 +377,12 @@ main() {
                 shift
                 ;;
             --since|-s)
-                since_period="${2:-}"
-                shift 2 || { echo "Error: --since requires an argument" >&2; exit 1; }
+                if [[ -z "${2:-}" || "$2" == -* ]]; then
+                    echo "Error: --since requires a duration value (e.g., 7d, 2w, 1m)" >&2
+                    exit 1
+                fi
+                since_period="$2"
+                shift 2
                 ;;
             --json|-j)
                 json_output=true
