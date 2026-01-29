@@ -601,10 +601,12 @@ main() {
         exit 1
     fi
 
-    # SAFEGUARD: Reject names with hex-encoded characters (e.g., -2d, -5f, -3d)
+    # SAFEGUARD: Reject names with URL-encoded characters (e.g., %2d, %5f, %3d)
     # These patterns indicate test framework name encoding that leaked into production
-    if [[ "$project_name" =~ -[0-9a-f]{2} ]]; then
-        echo -e "${RED}Error: Project name contains hex-encoded characters (e.g., -2d, -5f)${NC}" >&2
+    # Note: Uses % prefix (standard URL encoding), not - prefix which causes false positives
+    # on valid names like "code-review", "node-app", "test-flywheel-demo"
+    if [[ "$project_name" =~ %[0-9a-fA-F]{2} ]]; then
+        echo -e "${RED}Error: Project name contains URL-encoded characters (e.g., %2d, %5f)${NC}" >&2
         echo -e "${YELLOW}This pattern suggests a test framework encoding leak${NC}" >&2
         exit 1
     fi
