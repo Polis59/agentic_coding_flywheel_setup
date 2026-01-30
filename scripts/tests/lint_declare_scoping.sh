@@ -37,7 +37,7 @@ for file in "$LIB_DIR"/*.sh; do
     ((checked++)) || true
 
     # Find declare -A or declare -a lines that do NOT have -g
-    # Valid patterns:   declare -gA, declare -gA, declare -Ag, declare -ga
+    # Valid patterns:   declare -gA, declare -Ag, declare -ga, declare -ag
     # Invalid patterns: declare -A, declare -a (no -g anywhere in flags)
     while IFS= read -r match; do
         [[ -z "$match" ]] && continue

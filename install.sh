@@ -876,10 +876,11 @@ _acfs_signal_handler() {
 }
 
 cleanup() {
+    # Capture exit code FIRST, before any other commands can overwrite $?
+    local exit_code=$?
+
     # Cleanup must never abort — disable errexit for the entire function.
     set +e
-
-    local exit_code=$?
 
     # If a signal triggered this cleanup, mark state as interrupted so
     # resume logic does not see a partially-started phase.

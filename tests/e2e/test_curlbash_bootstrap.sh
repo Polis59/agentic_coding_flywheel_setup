@@ -52,19 +52,6 @@ assert_ok() {
     fi
 }
 
-assert_contains() {
-    local desc="$1"
-    local file="$2"
-    local pattern="$3"
-    if grep -qE "$pattern" "$file" 2>/dev/null; then
-        echo "  PASS: $desc"
-        ((PASS++)) || true
-    else
-        echo "  FAIL: $desc (pattern '$pattern' not found)"
-        ((FAIL++)) || true
-    fi
-}
-
 echo "=== E2E: curl|bash Bootstrap Path ==="
 echo ""
 
@@ -121,7 +108,7 @@ python3 -m http.server "$PORT" --directory "$ARCHIVE_DIR" &>/dev/null &
 HTTP_PID=$!
 
 # Wait for server to be ready
-for i in $(seq 1 20); do
+for _ in $(seq 1 20); do
     if curl -sf "http://localhost:$PORT/install.sh" >/dev/null 2>&1; then
         break
     fi
