@@ -915,7 +915,7 @@ parse_args() {
                 shift
                 ;;
             --mode)
-                if [[ -z "${2:-}" ]]; then
+                if [[ -z "${2:-}" || "$2" == -* ]]; then
                     log_fatal "--mode requires a value (e.g., --mode vibe)"
                 fi
                 MODE="$2"
@@ -987,7 +987,7 @@ parse_args() {
                 ;;
             --checksums-ref|--checksums-ref=*)
                 if [[ "$1" == "--checksums-ref" ]]; then
-                    if [[ -z "${2:-}" ]]; then
+                    if [[ -z "${2:-}" || "$2" == -* ]]; then
                         log_fatal "--checksums-ref requires a ref (e.g., --checksums-ref main)"
                     fi
                     ACFS_CHECKSUMS_REF="$2"
@@ -1013,7 +1013,7 @@ parse_args() {
             --target-ubuntu|--target-ubuntu=*)
                 # Set target Ubuntu version for auto-upgrade (nb4)
                 if [[ "$1" == "--target-ubuntu" ]]; then
-                    if [[ -z "${2:-}" ]]; then
+                    if [[ -z "${2:-}" || "$2" == -* ]]; then
                         log_fatal "--target-ubuntu requires a version (e.g., --target-ubuntu 25.10)"
                     fi
                     # shellcheck disable=SC2034  # used by run_ubuntu_upgrade_phase
@@ -1036,7 +1036,7 @@ parse_args() {
                 ;;
             --only)
                 # Add module to ONLY_MODULES list (for manifest-driven selection)
-                if [[ -z "${2:-}" ]]; then
+                if [[ -z "${2:-}" || "$2" == -* ]]; then
                     log_fatal "--only requires a module ID"
                 fi
                 ONLY_MODULES+=("$2")
@@ -1044,7 +1044,7 @@ parse_args() {
                 ;;
             --only-phase)
                 # Add phase to ONLY_PHASES list
-                if [[ -z "${2:-}" ]]; then
+                if [[ -z "${2:-}" || "$2" == -* ]]; then
                     log_fatal "--only-phase requires a phase number"
                 fi
                 ONLY_PHASES+=("$2")
@@ -1052,7 +1052,7 @@ parse_args() {
                 ;;
             --skip)
                 # Add module to SKIP_MODULES list
-                if [[ -z "${2:-}" ]]; then
+                if [[ -z "${2:-}" || "$2" == -* ]]; then
                     log_fatal "--skip requires a module ID"
                 fi
                 SKIP_MODULES+=("$2")
