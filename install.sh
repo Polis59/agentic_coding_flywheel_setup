@@ -4348,6 +4348,30 @@ NTM_CONFIG_EOF
         else
             log_detail "NTM config already exists, skipping"
         fi
+
+        # Install NTM command palette (bd-2od5.2.2)
+        # Provides useful prompts for ntm palette command
+        local ntm_palette_src="$SCRIPT_DIR/acfs/onboard/docs/ntm/command_palette.md"
+        local ntm_palette_dst="$ntm_config_dir/command_palette.md"
+        if [[ -f "$ntm_palette_src" ]]; then
+            if [[ ! -f "$ntm_palette_dst" ]]; then
+                log_detail "Installing NTM command palette"
+                run_as_target mkdir -p "$ntm_config_dir" || true
+                if cp "$ntm_palette_src" "$ntm_palette_dst" 2>/dev/null; then
+                    # Fix ownership for target user
+                    if [[ -n "${TARGET_USER:-}" ]] && [[ "$(id -u)" -eq 0 ]]; then
+                        chown "${TARGET_USER}:${TARGET_USER}" "$ntm_palette_dst" 2>/dev/null || true
+                    fi
+                    log_success "NTM command palette installed"
+                else
+                    log_warn "Failed to install NTM command palette"
+                fi
+            else
+                log_detail "NTM command palette already exists, skipping"
+            fi
+        else
+            log_detail "NTM command palette source not found, skipping"
+        fi
     fi
 
     # MCP Agent Mail (check for mcp-agent-mail stub or mcp_agent_mail directory)
