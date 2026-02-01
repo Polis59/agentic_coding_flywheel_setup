@@ -633,7 +633,7 @@ modules:
     verified_installer:
       tool: claude
       runner: bash
-      args: ["stable"]
+      args: ["latest"]
     install: []
     verify:
       - ~/.local/bin/claude --version || ~/.local/bin/claude --help
