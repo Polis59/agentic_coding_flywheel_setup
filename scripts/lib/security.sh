@@ -17,6 +17,17 @@ if [[ -z "${ACFS_BLUE:-}" ]]; then
     source "$SECURITY_SCRIPT_DIR/logging.sh" 2>/dev/null || true
 fi
 
+# Fallback logging if logging.sh was not sourced or failed to load
+if ! declare -f log_success &>/dev/null; then
+    log_success() { printf "OK: %s\n" "$1" >&2; }
+    log_error()   { printf "ERROR: %s\n" "$1" >&2; }
+    log_info()    { printf "INFO: %s\n" "$1" >&2; }
+    log_warn()    { printf "WARN: %s\n" "$1" >&2; }
+    log_step()    { printf "[%s] %s\n" "$1" "$2" >&2; }
+    log_detail()  { printf "  %s\n" "$1" >&2; }
+    log_fatal()   { printf "FATAL: %s\n" "$1" >&2; exit 1; }
+fi
+
 # Color aliases for backward compatibility (used by display functions below)
 CYAN="${ACFS_BLUE:-\033[0;36m}"
 DIM="${ACFS_GRAY:-\033[0;90m}"
