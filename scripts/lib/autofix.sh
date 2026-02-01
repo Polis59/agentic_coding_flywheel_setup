@@ -376,10 +376,21 @@ start_autofix_session() {
     log_info "[AUTO-FIX] Starting session: $ACFS_SESSION_ID"
 
     # Acquire lock (prevent concurrent modifications)
-    exec 200>"$ACFS_LOCK_FILE"
-    if ! flock -n 200; then
-        log_error "Another ACFS process is running auto-fix operations"
-        return 1
+    # NOTE: exec with high FDs can fail on some bash versions (5.3+).
+    # We try FD 200, then 199 as fallback, and warn if both fail.
+    local _autofix_lock_fd=""
+    if exec 200>"$ACFS_LOCK_FILE" 2>/dev/null; then
+        _autofix_lock_fd=200
+    elif exec 199>"$ACFS_LOCK_FILE" 2>/dev/null; then
+        _autofix_lock_fd=199
+    fi
+    if [[ -n "$_autofix_lock_fd" ]]; then
+        if ! flock -n "$_autofix_lock_fd"; then
+            log_error "Another ACFS process is running auto-fix operations"
+            return 1
+        fi
+    else
+        log_warn "Could not acquire autofix lock (continuing anyway)"
     fi
 
     # Write session start marker

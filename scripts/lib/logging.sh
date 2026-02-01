@@ -45,8 +45,28 @@ if ! declare -f acfs_log_init >/dev/null 2>&1; then
 
         # Tee stderr: all stderr output goes to both terminal and log file.
         # fd 3 = original stderr (preserved for terminal output).
-        exec 3>&2
-        exec 2> >(tee -a "$ACFS_LOG_FILE" >&3)
+        #
+        # NOTE: Process substitution >(tee ...) can fail on some systems
+        # (especially Ubuntu 25.04 with bash 5.3+). We test first and
+        # fall back to simple file logging if it fails.
+        local tee_logging_ok=false
+        if command -v tee >/dev/null 2>&1; then
+            # Test if process substitution works before committing to it
+            # shellcheck disable=SC2261
+            if (exec 3>&1; echo test > >(cat >/dev/null)) 2>/dev/null; then
+                exec 3>&2 || true
+                # shellcheck disable=SC2261
+                if exec 2> >(tee -a "$ACFS_LOG_FILE" >&3); then
+                    tee_logging_ok=true
+                fi
+            fi
+        fi
+
+        if [[ "$tee_logging_ok" != "true" ]]; then
+            # Fallback: rely on explicit logging calls instead of automatic tee
+            ACFS_LOG_FALLBACK=true
+            export ACFS_LOG_FALLBACK
+        fi
     }
 fi
 
