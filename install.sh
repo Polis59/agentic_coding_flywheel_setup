@@ -4593,6 +4593,17 @@ finalize() {
     try_step "Setting acfs-update ownership" $SUDO chown "$TARGET_USER:$TARGET_USER" "$ACFS_HOME/bin/acfs-update" || return 1
     try_step "Linking acfs-update command" run_as_target ln -sf "$ACFS_HOME/bin/acfs-update" "$TARGET_HOME/.local/bin/acfs-update" || return 1
 
+    # Install root AGENTS.md generator (if available) and generate /AGENTS.md once
+    if [[ -n "${SCRIPT_DIR:-}" ]] && [[ -f "$SCRIPT_DIR/scripts/generate-root-agents-md.sh" ]]; then
+        try_step "Installing flywheel-update-agents-md" install_asset "scripts/generate-root-agents-md.sh" "$ACFS_HOME/bin/flywheel-update-agents-md" || return 1
+        try_step "Setting flywheel-update-agents-md permissions" $SUDO chmod 755 "$ACFS_HOME/bin/flywheel-update-agents-md" || return 1
+        try_step "Setting flywheel-update-agents-md ownership" $SUDO chown "$TARGET_USER:$TARGET_USER" "$ACFS_HOME/bin/flywheel-update-agents-md" || return 1
+        try_step "Linking flywheel-update-agents-md command" $SUDO ln -sf "$ACFS_HOME/bin/flywheel-update-agents-md" "/usr/local/bin/flywheel-update-agents-md" || return 1
+        try_step "Generating /AGENTS.md" $SUDO /usr/local/bin/flywheel-update-agents-md || true
+    else
+        log_warn "Root AGENTS.md generator not found; skipping /AGENTS.md generation"
+    fi
+
     # Install services-setup wizard
     try_step "Installing services-setup.sh" install_asset "scripts/services-setup.sh" "$ACFS_HOME/scripts/services-setup.sh" || return 1
     try_step "Setting scripts permissions" $SUDO chmod 755 "$ACFS_HOME/scripts/services-setup.sh" || return 1

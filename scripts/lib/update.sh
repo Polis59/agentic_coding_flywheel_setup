@@ -1679,6 +1679,20 @@ update_stack() {
 }
 
 # ============================================================
+# Root AGENTS.md Generation
+# ============================================================
+update_root_agents_md() {
+    log_section "Root AGENTS.md"
+
+    if ! cmd_exists flywheel-update-agents-md; then
+        log_item "skip" "Root AGENTS.md" "flywheel-update-agents-md not installed"
+        return 0
+    fi
+
+    run_cmd_sudo "Root AGENTS.md" flywheel-update-agents-md
+}
+
+# ============================================================
 # Shell Tool Updates
 # Related: bead db0
 # ============================================================
@@ -2263,6 +2277,7 @@ main() {
     update_go
     update_shell
     update_stack
+    update_root_agents_md
 
     # Summary
     print_summary
