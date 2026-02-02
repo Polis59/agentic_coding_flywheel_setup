@@ -377,12 +377,15 @@ start_autofix_session() {
     log_info "[AUTO-FIX] Starting session: $ACFS_SESSION_ID"
 
     # Acquire lock (prevent concurrent modifications)
-    # NOTE: exec with high FDs can fail on some bash versions (5.3+).
-    # We try FD 200, then 199 as fallback, and warn if both fail.
+    # NOTE: On bash 5.3+, `exec N>file` under set -e exits the script
+    # before `if` can catch the failure. We test in a subshell first,
+    # then only exec in the main shell if the subshell succeeded.
     ACFS_AUTOFIX_LOCK_FD=""
-    if exec 200>"$ACFS_LOCK_FILE" 2>/dev/null; then
+    if (exec 200>"$ACFS_LOCK_FILE") 2>/dev/null; then
+        exec 200>"$ACFS_LOCK_FILE"
         ACFS_AUTOFIX_LOCK_FD=200
-    elif exec 199>"$ACFS_LOCK_FILE" 2>/dev/null; then
+    elif (exec 199>"$ACFS_LOCK_FILE") 2>/dev/null; then
+        exec 199>"$ACFS_LOCK_FILE"
         ACFS_AUTOFIX_LOCK_FD=199
     fi
     if [[ -n "$ACFS_AUTOFIX_LOCK_FD" ]]; then

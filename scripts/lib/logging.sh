@@ -51,13 +51,16 @@ if ! declare -f acfs_log_init >/dev/null 2>&1; then
         # fall back to simple file logging if it fails.
         local tee_logging_ok=false
         if command -v tee >/dev/null 2>&1; then
-            # Test if process substitution works before committing to it
+            # Test if process substitution works before committing to it.
+            # On bash 5.3+, bare `exec` under set -e can exit the script
+            # before `if` catches the failure, so we test in a subshell.
             # shellcheck disable=SC2261
             if (exec 3>&1; echo test > >(cat >/dev/null)) 2>/dev/null; then
                 exec 3>&2 || true
                 # shellcheck disable=SC2261
-                if exec 2> >(tee -a "$ACFS_LOG_FILE" >&3); then
-                    tee_logging_ok=true
+                # Use set +e locally to prevent exec from exiting under bash 5.3+
+                if (set +e; exec 2> >(tee -a "$ACFS_LOG_FILE" >&3)) 2>/dev/null; then
+                    exec 2> >(tee -a "$ACFS_LOG_FILE" >&3) 2>/dev/null && tee_logging_ok=true
                 fi
             fi
         fi

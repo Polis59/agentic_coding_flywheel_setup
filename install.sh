@@ -651,7 +651,9 @@ acfs_log_init() {
     # If tee logging fails, we fall back to simple file redirection.
     local tee_logging_ok=false
     if command -v tee >/dev/null 2>&1; then
-        # Test if process substitution works before committing to it
+        # Test if process substitution works before committing to it.
+        # On bash 5.3+, bare `exec` under set -e can exit the script
+        # before `if` catches the failure, so we test in a subshell.
         # shellcheck disable=SC2261
         if (exec 3>&1; echo test > >(cat >/dev/null)) 2>/dev/null; then
             # Process substitution works - set up tee logging
@@ -659,8 +661,9 @@ acfs_log_init() {
             exec 3>&2 || true
             # Now redirect stderr to tee (which sends to both log and original stderr)
             # shellcheck disable=SC2261
-            if exec 2> >(tee -a "$ACFS_LOG_FILE" >&3); then
-                tee_logging_ok=true
+            # Use subshell test first to prevent exec from exiting under bash 5.3+
+            if (set +e; exec 2> >(tee -a "$ACFS_LOG_FILE" >&3)) 2>/dev/null; then
+                exec 2> >(tee -a "$ACFS_LOG_FILE" >&3) 2>/dev/null && tee_logging_ok=true
             fi
         fi
     fi
@@ -5102,12 +5105,15 @@ main() {
         local _acfs_lock_dir="${ACFS_HOME:-$HOME/.acfs}"
         mkdir -p "$_acfs_lock_dir" 2>/dev/null || true
         local _acfs_lock_file="$_acfs_lock_dir/.install.lock"
-        # NOTE: exec with high FDs can fail on some bash versions (5.3+).
-        # We try FD 199, then 198 as fallback, and skip locking if both fail.
+        # NOTE: On bash 5.3+, `exec N>file` under set -e exits the script
+        # before `if` can catch the failure. We test in a subshell first,
+        # then only exec in the main shell if the subshell succeeded.
         local _acfs_lock_fd=""
-        if exec 199>"$_acfs_lock_file" 2>/dev/null; then
+        if (exec 199>"$_acfs_lock_file") 2>/dev/null; then
+            exec 199>"$_acfs_lock_file"
             _acfs_lock_fd=199
-        elif exec 198>"$_acfs_lock_file" 2>/dev/null; then
+        elif (exec 198>"$_acfs_lock_file") 2>/dev/null; then
+            exec 198>"$_acfs_lock_file"
             _acfs_lock_fd=198
         fi
         if [[ -n "$_acfs_lock_fd" ]]; then

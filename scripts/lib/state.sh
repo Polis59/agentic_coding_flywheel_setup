@@ -382,19 +382,18 @@ _state_acquire_lock() {
     fi
 
     # Open lock file on FD 200 (same FD convention as autofix.sh)
-    # NOTE: On some bash versions (5.3+), exec with high FDs can fail.
-    # We use eval to work around potential issues with direct exec.
-    # The 2>/dev/null suppresses errors from the redirection itself.
-    if ! eval 'exec 200>"$lock_file"' 2>/dev/null; then
-        # Try alternate FD if 200 fails
-        if ! eval 'exec 199>"$lock_file"' 2>/dev/null; then
-            # Lock acquisition not possible, return failure
-            return 1
-        fi
-        # Use FD 199 instead
+    # NOTE: On bash 5.3+, `exec N>file` under set -e exits the script
+    # before `if` can catch the failure. We test in a subshell first,
+    # then only exec in the main shell if the subshell succeeded.
+    if (exec 200>"$lock_file") 2>/dev/null; then
+        exec 200>"$lock_file"
+        ACFS_LOCK_FD=200
+    elif (exec 199>"$lock_file") 2>/dev/null; then
+        exec 199>"$lock_file"
         ACFS_LOCK_FD=199
     else
-        ACFS_LOCK_FD=200
+        # Lock acquisition not possible, return failure
+        return 1
     fi
 
     # Try to acquire lock with a 5-second timeout
