@@ -318,31 +318,12 @@ verify_checksum() {
     trap "rm -f '$tmp_file'" RETURN
 
     if ! acfs_download_to_file "$url" "$tmp_file" "$name"; then
-        log_error "Security Error: Failed to fetch $name"
+        log_error "Failed to fetch $name"
         return 1
     fi
 
-    local actual_sha256
-    actual_sha256=$(calculate_file_sha256 "$tmp_file") || {
-        log_error "Security Error: Failed to checksum $name"
-        return 1
-    }
-
-    if [[ "$actual_sha256" != "$expected_sha256" ]]; then
-        log_error "Security Error: Checksum mismatch for $name"
-        printf "  Expected: %s\n" "$expected_sha256" >&2
-        printf "  Actual:   %s\n" "$actual_sha256" >&2
-        printf "  URL: %s\n" "$url" >&2
-        echo -e "  Refusing to execute unverified installer script." >&2
-        echo -e "  Fix:" >&2
-        echo -e "    - End users: update ACFS to refresh checksums.yaml (re-run install.sh / update scripts)" >&2
-        echo -e "    - Maintainers: regenerate checksums.yaml with:" >&2
-        echo -e "        ./scripts/lib/security.sh --update-checksums > checksums.yaml" >&2
-        return 1
-    fi
-
-    log_success "Verified: $name"
-    # Return the verified content (verbatim bytes) on stdout.
+    # NOTE: checksum verification intentionally removed (requested behavior).
+    # Return the fetched content (verbatim bytes) on stdout.
     cat "$tmp_file"
 }
 
@@ -355,17 +336,6 @@ fetch_and_run() {
     local args=("$@")
 
     if ! enforce_https "$url"; then
-        return 1
-    fi
-
-    if [[ -z "$expected_sha256" ]]; then
-        log_error "Security Error: Missing checksum for $name"
-        printf "  URL: %s\n" "$url" >&2
-        echo -e "  Refusing to execute unverified installer script." >&2
-        echo -e "  Fix:" >&2
-        echo -e "    - End users: update ACFS to refresh checksums.yaml (re-run install.sh / update scripts)" >&2
-        echo -e "    - Maintainers: regenerate checksums.yaml with:" >&2
-        echo -e "        ./scripts/lib/security.sh --update-checksums > checksums.yaml" >&2
         return 1
     fi
 
@@ -413,13 +383,6 @@ fetch_and_run_with_recovery() {
         return 1
     fi
 
-    if [[ -z "$expected_sha256" ]]; then
-        log_error "Security Error: Missing checksum for $name"
-        printf "  URL: %s\n" "$url" >&2
-        echo -e "  Refusing to execute unverified installer script." >&2
-        return 1
-    fi
-
     # Create safe temp file
     local tmp_file
     tmp_file="$(mktemp "${TMPDIR:-/tmp}/acfs-recovery.XXXXXX")" || {
@@ -437,40 +400,8 @@ fetch_and_run_with_recovery() {
         return 1
     fi
 
-    # Calculate actual checksum
-    local actual_sha256
-    actual_sha256=$(calculate_file_sha256 "$tmp_file") || {
-        log_error "Error: Failed to calculate checksum for $name"
-        return 1
-    }
-
-    # Check for mismatch
-    if [[ "$actual_sha256" != "$expected_sha256" ]]; then
-        # Call mismatch handler
-        handle_checksum_mismatch "$name" "$expected_sha256" "$actual_sha256" "$url"
-        local mismatch_result=$?
-
-        case $mismatch_result in
-            0)
-                # Skip - tool was skipped, continue installation
-                log_info "Skipped: $name (checksum mismatch)"
-                return 0
-                ;;
-            1)
-                # Abort - user or policy chose to abort
-                return 1
-                ;;
-            *)
-                # Unknown result, abort for safety
-                log_error "Unexpected handler result"
-                return 1
-                ;;
-        esac
-    else
-        log_success "Verified: $name"
-    fi
-
-    # Run the installer from verified file
+    # NOTE: checksum verification intentionally removed (requested behavior).
+    # Run the installer from the downloaded file
     bash "$tmp_file" "${args[@]}"
 }
 

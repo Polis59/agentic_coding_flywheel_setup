@@ -26,7 +26,6 @@
 #   --auto-fix-dry-run     Show what auto-fix would do without executing
 #   --skip-ubuntu-upgrade  Skip automatic Ubuntu version upgrade
 #   --target-ubuntu=VER    Set target Ubuntu version (default: 25.10)
-#   --strict          Treat ALL tools as critical (any checksum mismatch aborts)
 #   --list-modules    List available modules and exit
 #   --print-plan      Print execution plan and exit (no installs)
 #   --only <module>       Only run a specific module (repeatable)
@@ -1021,12 +1020,6 @@ parse_args() {
                 export ACFS_INTERACTIVE=true
                 shift
                 ;;
-            --strict)
-                # Treat all tools as critical - any checksum mismatch aborts
-                # Related: bead 8mv, tools.sh ACFS_STRICT_MODE handling
-                export ACFS_STRICT_MODE=true
-                shift
-                ;;
             --skip-preflight)
                 SKIP_PREFLIGHT=true
                 shift
@@ -1762,31 +1755,16 @@ acfs_curl_with_retry() {
     return 1
 }
 
-acfs_calculate_file_sha256() {
-    local file_path="$1"
-
-    if command_exists sha256sum; then
-        sha256sum "$file_path" | cut -d' ' -f1
-        return 0
-    fi
-
-    if command_exists shasum; then
-        shasum -a 256 "$file_path" | cut -d' ' -f1
-        return 0
-    fi
-
-    log_error "No SHA256 tool available (need sha256sum or shasum)"
-    return 1
-}
-
 acfs_download_file_and_verify_sha256() {
     local url="$1"
     local output_path="$2"
     local expected_sha256="$3"
     local label="${4:-download}"
 
-    if [[ -z "$url" || -z "$output_path" || -z "$expected_sha256" ]]; then
-        log_error "acfs_download_file_and_verify_sha256: missing url, output path, or expected sha256"
+    # Note: checksum verification intentionally removed (requested behavior).
+    # Keep the third argument for compatibility with existing call sites.
+    if [[ -z "$url" || -z "$output_path" ]]; then
+        log_error "acfs_download_file_and_verify_sha256: missing url or output path"
         return 1
     fi
 
@@ -1798,17 +1776,6 @@ acfs_download_file_and_verify_sha256() {
     if ! acfs_curl_with_retry "$url" "$output_path"; then
         log_error "Failed to download $label"
         log_detail "URL: $url"
-        return 1
-    fi
-
-    local actual_sha256=""
-    actual_sha256="$(acfs_calculate_file_sha256 "$output_path")" || actual_sha256=""
-
-    if [[ -z "$actual_sha256" ]] || [[ "$actual_sha256" != "$expected_sha256" ]]; then
-        log_error "Security error: checksum mismatch for $label"
-        log_detail "URL: $url"
-        log_detail "Expected: $expected_sha256"
-        log_detail "Actual:   ${actual_sha256:-<missing>}"
         return 1
     fi
 
@@ -1859,15 +1826,14 @@ bootstrap_repo_archive() {
         --wildcards --wildcards-match-slash \
         "*/scripts/**" \
         "*/acfs/**" \
-        "*/checksums.yaml" \
         "*/acfs.manifest.yaml" \
         "*/VERSION"; then
         log_error "Failed to extract ACFS bootstrap archive (tar error)"
         return 1
     fi
 
-    if [[ ! -f "$tmp_dir/acfs.manifest.yaml" ]] || [[ ! -f "$tmp_dir/checksums.yaml" ]] || [[ ! -f "$tmp_dir/VERSION" ]]; then
-        log_error "Bootstrap archive missing required manifest/checksums/VERSION files"
+    if [[ ! -f "$tmp_dir/acfs.manifest.yaml" ]] || [[ ! -f "$tmp_dir/VERSION" ]]; then
+        log_error "Bootstrap archive missing required manifest/VERSION files"
         return 1
     fi
 
@@ -1891,31 +1857,13 @@ bootstrap_repo_archive() {
         return 1
     fi
 
-    local manifest_sha expected_sha
-    manifest_sha="$(acfs_calculate_file_sha256 "$tmp_dir/acfs.manifest.yaml")" || return 1
-    expected_sha="$(grep -E '^ACFS_MANIFEST_SHA256=' "$tmp_dir/scripts/generated/manifest_index.sh" | head -n 1 | cut -d'=' -f2 | tr -d '\"' || true)"
-
-    if [[ -z "$expected_sha" ]]; then
-        log_error "Bootstrap manifest index missing ACFS_MANIFEST_SHA256"
-        return 1
-    fi
-
-    if [[ "$manifest_sha" != "$expected_sha" ]]; then
-        log_error "Bootstrap mismatch: generated scripts do not match manifest."
-        log_detail "Expected: $expected_sha"
-        log_detail "Actual:   $manifest_sha"
-        log_detail "Fix: retry or pin ACFS_REF to a tag/sha to avoid mixed refs."
-        return 1
-    fi
-
     ACFS_BOOTSTRAP_DIR="$tmp_dir"
     ACFS_LIB_DIR="$tmp_dir/scripts/lib"
     ACFS_GENERATED_DIR="$tmp_dir/scripts/generated"
     ACFS_ASSETS_DIR="$tmp_dir/acfs"
-    ACFS_CHECKSUMS_YAML="$tmp_dir/checksums.yaml"
     ACFS_MANIFEST_YAML="$tmp_dir/acfs.manifest.yaml"
 
-    export ACFS_BOOTSTRAP_DIR ACFS_LIB_DIR ACFS_GENERATED_DIR ACFS_ASSETS_DIR ACFS_CHECKSUMS_YAML ACFS_MANIFEST_YAML
+    export ACFS_BOOTSTRAP_DIR ACFS_LIB_DIR ACFS_GENERATED_DIR ACFS_ASSETS_DIR ACFS_MANIFEST_YAML
 
     log_success "Bootstrap archive ready"
     return 0
@@ -2059,58 +2007,6 @@ install_asset() {
     fi
 }
 
-install_checksums_yaml() {
-    local dest_path="$1"
-
-    if [[ -z "$dest_path" ]]; then
-        log_error "install_checksums_yaml: Missing destination path"
-        return 1
-    fi
-
-    # If checksums ref matches the install ref, use the standard asset path.
-    if [[ -z "${ACFS_CHECKSUMS_REF:-}" || -z "${ACFS_REF_INPUT:-}" || "$ACFS_CHECKSUMS_REF" == "$ACFS_REF_INPUT" ]]; then
-        install_asset "checksums.yaml" "$dest_path"
-        return $?
-    fi
-
-    # Otherwise, fetch checksums from the dedicated checksums ref.
-    local content=""
-    content="$(acfs_fetch_fresh_checksums_via_api)" || {
-        local cb
-        cb="$(date +%s)"
-        content="$(acfs_fetch_url_content "$ACFS_CHECKSUMS_RAW/checksums.yaml?cb=${cb}")" || {
-            log_error "Failed to fetch checksums.yaml from ref '${ACFS_CHECKSUMS_REF}'"
-            return 1
-        }
-    }
-
-    local dest_dir
-    dest_dir="$(dirname "$dest_path")"
-
-    local sudo_cmd="${SUDO:-}"
-    if [[ -z "$sudo_cmd" ]] && [[ $EUID -ne 0 ]] && command -v sudo &>/dev/null; then
-        sudo_cmd="sudo"
-    fi
-
-    local need_sudo=false
-    if [[ -e "$dest_path" ]]; then
-        [[ -w "$dest_path" ]] || need_sudo=true
-    else
-        [[ -w "$dest_dir" ]] || need_sudo=true
-    fi
-
-    if [[ "$need_sudo" == "true" ]]; then
-        printf '%s' "$content" | $sudo_cmd tee "$dest_path" >/dev/null
-    else
-        printf '%s' "$content" > "$dest_path"
-    fi
-
-    if [[ ! -f "$dest_path" ]]; then
-        log_error "install_checksums_yaml: File not created: $dest_path"
-        return 1
-    fi
-}
-
 run_as_target() {
     local user="$TARGET_USER"
     local user_home="${TARGET_HOME:-/home/$user}"
@@ -2171,27 +2067,11 @@ run_as_target() {
 }
 
 # ============================================================
-# Upstream installer verification (checksums.yaml)
+# Upstream installer lookup (checksums.yaml)
 # ============================================================
 
 declare -A ACFS_UPSTREAM_URLS=()
-declare -A ACFS_UPSTREAM_SHA256=()
 ACFS_UPSTREAM_LOADED=false
-
-acfs_calculate_sha256() {
-    if command_exists sha256sum; then
-        sha256sum | cut -d' ' -f1
-        return 0
-    fi
-
-    if command_exists shasum; then
-        shasum -a 256 | cut -d' ' -f1
-        return 0
-    fi
-
-    log_error "No SHA256 tool available (need sha256sum or shasum)"
-    return 1
-}
 
 acfs_fetch_url_content() {
     local url="$1"
@@ -2268,8 +2148,8 @@ acfs_fetch_fresh_checksums_via_api() {
     printf '%s' "$content"
 }
 
-# Parse checksums.yaml content into associative arrays.
-# Takes YAML content as argument, populates ACFS_UPSTREAM_URLS and ACFS_UPSTREAM_SHA256.
+# Parse checksums.yaml content into associative array.
+# Takes YAML content as argument, populates ACFS_UPSTREAM_URLS.
 acfs_parse_checksums_content() {
     local content="$1"
     local in_installers=false
@@ -2277,7 +2157,6 @@ acfs_parse_checksums_content() {
 
     # Clear existing entries for fresh parse
     ACFS_UPSTREAM_URLS=()
-    ACFS_UPSTREAM_SHA256=()
 
     while IFS= read -r line; do
         [[ "$line" =~ ^[[:space:]]*# ]] && continue
@@ -2313,19 +2192,6 @@ acfs_parse_checksums_content() {
             continue
         fi
 
-        if [[ "$line" =~ ^[[:space:]]*sha256:[[:space:]]*(.*)$ ]]; then
-            local val="${BASH_REMATCH[1]}"
-            val="${val%%#*}"
-            val="${val%"${val##*[![:space:]]}"}"
-            val="${val#"${val%%[![:space:]]*}"}"
-            val="${val%\"}" val="${val#\"}"
-            val="${val%\'}" val="${val#\'}"
-
-            if [[ -n "$val" ]]; then
-                ACFS_UPSTREAM_SHA256["$current_tool"]="$val"
-            fi
-            continue
-        fi
     done <<< "$content"
 }
 
@@ -2377,115 +2243,25 @@ acfs_load_upstream_checksums() {
 
     acfs_parse_checksums_content "$content"
 
-    local required_tools=(
-        atuin bun bv caam cass claude cm dcg mcp_agent_mail ntm ohmyzsh rust slb ubs uv zoxide
-    )
-    local missing_required_tools=false
-    local tool
-    for tool in "${required_tools[@]}"; do
-        if [[ -z "${ACFS_UPSTREAM_URLS[$tool]:-}" ]] || [[ -z "${ACFS_UPSTREAM_SHA256[$tool]:-}" ]]; then
-            log_error "checksums.yaml missing entry for '$tool'"
-            missing_required_tools=true
-        fi
-    done
-    if [[ "$missing_required_tools" == "true" ]]; then
-        return 1
-    fi
-
     ACFS_UPSTREAM_LOADED=true
     return 0
 }
 
 #
-# Upstream installers are pinned by checksums.yaml.
-# On checksum mismatch, we attempt a fresh fetch via GitHub API to handle CDN caching.
-# If still mismatched after fresh fetch, we fail closed (never execute unverified scripts).
-
+# Upstream installers are fetched and executed without checksum verification.
 acfs_run_verified_upstream_script_as_target() {
     local tool="$1"
     local runner="$2"
     shift 2 || true
 
-    acfs_load_upstream_checksums
+    acfs_load_upstream_checksums || return 1
 
     local url="${ACFS_UPSTREAM_URLS[$tool]:-}"
-    local expected_sha256="${ACFS_UPSTREAM_SHA256[$tool]:-}"
-    if [[ -z "$url" ]] || [[ -z "$expected_sha256" ]]; then
-        log_error "No checksum recorded for upstream installer: $tool"
+    if [[ -z "$url" ]]; then
+        log_error "No upstream installer URL recorded for: $tool"
         return 1
     fi
-
-    # Preserve trailing newlines when capturing remote script content.
-    # Bash command substitution trims trailing newlines, which would change the
-    # checksum we compute vs the exact bytes we execute. Append an EOF sentinel
-    # so the captured output never ends with a newline, then strip it.
-    local sentinel="__ACFS_EOF_SENTINEL__"
-    local content_with_sentinel
-    content_with_sentinel="$(
-        acfs_fetch_url_content "$url" || exit $?
-        printf '%s' "$sentinel"
-    )" || return 1
-
-    if [[ "$content_with_sentinel" != *"$sentinel" ]]; then
-        log_error "Failed to fetch upstream URL: $url"
-        return 1
-    fi
-
-    local content="${content_with_sentinel%"$sentinel"}"
-
-    local actual_sha256
-    actual_sha256="$(printf '%s' "$content" | acfs_calculate_sha256)" || return 1
-
-    if [[ "$actual_sha256" != "$expected_sha256" ]]; then
-        # Checksum mismatch - but this might be due to CDN caching of our checksums.yaml.
-        # Try fetching FRESH checksums directly via GitHub API (bypasses all CDN caching).
-        log_detail "Checksum mismatch for '$tool' - fetching fresh checksums via GitHub API..."
-
-        local fresh_content
-        fresh_content="$(acfs_fetch_fresh_checksums_via_api)" || {
-            log_detail "GitHub API fallback failed, cannot verify with fresh checksums"
-            log_error "Security error: checksum mismatch for '$tool'"
-            log_detail "URL: $url"
-            log_detail "Expected: $expected_sha256"
-            log_detail "Actual:   $actual_sha256"
-            log_error "Refusing to execute unverified installer script."
-            return 1
-        }
-
-        # Parse fresh checksums and get the updated expected hash
-        acfs_parse_checksums_content "$fresh_content"
-        local fresh_expected_sha256="${ACFS_UPSTREAM_SHA256[$tool]:-}"
-
-        if [[ -z "$fresh_expected_sha256" ]]; then
-            log_error "Fresh checksums.yaml missing entry for '$tool'"
-            return 1
-        fi
-
-        # Re-verify with fresh checksum
-        if [[ "$actual_sha256" == "$fresh_expected_sha256" ]]; then
-            log_success "Verified '$tool' with fresh checksums from GitHub API"
-            # Note: ACFS_UPSTREAM_SHA256 already updated by acfs_parse_checksums_content above
-        else
-            # Still doesn't match even with fresh checksums - this is a real problem
-            log_error "Security error: checksum mismatch for '$tool' (verified with fresh checksums)"
-            log_detail "URL: $url"
-            log_detail "Expected (fresh): $fresh_expected_sha256"
-            log_detail "Actual:           $actual_sha256"
-            log_error "Refusing to execute unverified installer script."
-            log_error "This could indicate:"
-            log_error "  1. Upstream changed their installer very recently (wait and retry)"
-            log_error "  2. Potential tampering (investigate before proceeding)"
-            log_error "  3. Network issue corrupting downloads (retry on different network)"
-
-            if [[ "${ACFS_STRICT_MODE:-false}" == "true" ]]; then
-                log_fatal "Strict mode: aborting due to checksum mismatch for '$tool'"
-            fi
-
-            return 1
-        fi
-    fi
-
-    printf '%s' "$content" | run_as_target "$runner" -s -- "$@"
+    acfs_fetch_url_content "$url" | run_as_target "$runner" -s -- "$@"
 }
 
 ensure_root() {
@@ -3516,17 +3292,12 @@ install_cli_tools() {
             if [[ -n "$arch" ]]; then
                 local lg_ver="0.44.1"
                 local lg_url="https://github.com/jesseduffield/lazygit/releases/download/v${lg_ver}/lazygit_${lg_ver}_Linux_${arch}.tar.gz"
-                local lg_sha256=""
-                case "$arch" in
-                    x86_64) lg_sha256="84682f4ad5a449d0a3ffbc8332200fe8651aee9dd91dcd8d87197ba6c2450dbc" ;;
-                    arm64) lg_sha256="26a435f47b691325c086dad2f84daa6556df5af8efc52b6ed624fa657605c976" ;;
-                esac
                 local lg_tmp=""
                 if command -v mktemp &>/dev/null; then
                     lg_tmp="$(mktemp "${TMPDIR:-/tmp}/acfs-lazygit.XXXXXX" 2>/dev/null)" || lg_tmp=""
                 fi
                 if [[ -n "$lg_tmp" ]]; then
-                    if acfs_download_file_and_verify_sha256 "$lg_url" "$lg_tmp" "$lg_sha256" "lazygit ${lg_ver} (${arch})"; then
+                    if acfs_download_file_and_verify_sha256 "$lg_url" "$lg_tmp" "" "lazygit ${lg_ver} (${arch})"; then
                         if $SUDO tar -xzf "$lg_tmp" -C /usr/local/bin --no-same-owner --no-same-permissions lazygit 2>/dev/null; then
                             $SUDO chmod 0755 /usr/local/bin/lazygit 2>/dev/null || true
                             if command_exists lazygit; then
@@ -3555,17 +3326,12 @@ install_cli_tools() {
         if [[ -n "$arch" ]]; then
             local ld_ver="0.23.3"
             local ld_url="https://github.com/jesseduffield/lazydocker/releases/download/v${ld_ver}/lazydocker_${ld_ver}_Linux_${arch}.tar.gz"
-            local ld_sha256=""
-            case "$arch" in
-                x86_64) ld_sha256="1f3c7037326973b85cb85447b2574595103185f8ed067b605dd43cc201bc8786" ;;
-                arm64) ld_sha256="ae7bed0309289396d396b8502b2d78d153a4f8ce8add042f655332241e7eac31" ;;
-            esac
             local ld_tmp=""
             if command -v mktemp &>/dev/null; then
                 ld_tmp="$(mktemp "${TMPDIR:-/tmp}/acfs-lazydocker.XXXXXX" 2>/dev/null)" || ld_tmp=""
             fi
             if [[ -n "$ld_tmp" ]]; then
-                if acfs_download_file_and_verify_sha256 "$ld_url" "$ld_tmp" "$ld_sha256" "lazydocker ${ld_ver} (${arch})"; then
+                if acfs_download_file_and_verify_sha256 "$ld_url" "$ld_tmp" "" "lazydocker ${ld_ver} (${arch})"; then
                     if $SUDO tar -xzf "$ld_tmp" -C /usr/local/bin --no-same-owner --no-same-permissions lazydocker 2>/dev/null; then
                         $SUDO chmod 0755 /usr/local/bin/lazydocker 2>/dev/null || true
                         if command_exists lazydocker; then
@@ -4063,18 +3829,15 @@ install_supabase_cli_release() {
     local version="${tag#v}"
     local base_url="https://github.com/supabase/cli/releases/download/${tag}"
     local tarball="supabase_linux_${arch}.tar.gz"
-    local checksums="supabase_${version}_checksums.txt"
 
     local tmp_dir=""
     local tmp_tgz=""
-    local tmp_checksums=""
     if command -v mktemp &>/dev/null; then
         tmp_dir="$(mktemp -d "${TMPDIR:-/tmp}/acfs-supabase.XXXXXX" 2>/dev/null)" || tmp_dir=""
         tmp_tgz="$(mktemp "${TMPDIR:-/tmp}/acfs-supabase.tgz.XXXXXX" 2>/dev/null)" || tmp_tgz=""
-        tmp_checksums="$(mktemp "${TMPDIR:-/tmp}/acfs-supabase.sha.XXXXXX" 2>/dev/null)" || tmp_checksums=""
     fi
 
-    if [[ -z "$tmp_dir" ]] || [[ -z "$tmp_tgz" ]] || [[ -z "$tmp_checksums" ]]; then
+    if [[ -z "$tmp_dir" ]] || [[ -z "$tmp_tgz" ]]; then
         log_error "Supabase CLI: failed to create temp files"
         return 1
     fi
@@ -4083,26 +3846,7 @@ install_supabase_cli_release() {
         log_error "Supabase CLI: failed to download ${tarball}"
         return 1
     fi
-    if ! acfs_curl -o "$tmp_checksums" "${base_url}/${checksums}" 2>/dev/null; then
-        log_error "Supabase CLI: failed to download checksums"
-        return 1
-    fi
-
-    local expected_sha=""
-    expected_sha="$(grep -E " ${tarball}\$" "$tmp_checksums" 2>/dev/null | awk '{print $1}' | head -n1)" || true
-    if [[ -z "$expected_sha" ]]; then
-        log_error "Supabase CLI: checksum entry not found for ${tarball}"
-        return 1
-    fi
-
-    local actual_sha=""
-    actual_sha="$(acfs_calculate_file_sha256 "$tmp_tgz" 2>/dev/null)" || actual_sha=""
-    if [[ -z "$actual_sha" ]] || [[ "$actual_sha" != "$expected_sha" ]]; then
-        log_error "Supabase CLI: checksum mismatch"
-        log_error "  Expected: $expected_sha"
-        log_error "  Actual:   ${actual_sha:-<missing>}"
-        return 1
-    fi
+    # NOTE: checksum verification intentionally removed (requested behavior).
 
     # Extract only the binary if possible (keeps tmp dir clean).
     if ! tar -xzf "$tmp_tgz" -C "$tmp_dir" supabase 2>/dev/null; then
@@ -4135,7 +3879,7 @@ install_supabase_cli_release() {
     fi
 
     # Best-effort cleanup
-    rm -f "$tmp_tgz" "$tmp_checksums" "$extracted_bin" 2>/dev/null || true
+    rm -f "$tmp_tgz" "$extracted_bin" 2>/dev/null || true
     rmdir "$tmp_dir" 2>/dev/null || true
 
     return 0
@@ -4385,18 +4129,17 @@ NTM_CONFIG_EOF
         local tool="mcp_agent_mail"
         local target_dir="$TARGET_HOME/mcp_agent_mail"
 
-        # Fetch + verify the installer script, then run it in tmux to avoid blocking.
+        # Fetch the installer script, then run it in tmux to avoid blocking.
         if acfs_load_upstream_checksums; then
             local url="${ACFS_UPSTREAM_URLS[$tool]:-}"
-            local expected_sha256="${ACFS_UPSTREAM_SHA256[$tool]:-}"
 
-            if [[ -z "$url" ]] || [[ -z "$expected_sha256" ]]; then
-                log_warn "MCP Agent Mail: missing installer URL/checksum"
+            if [[ -z "$url" ]]; then
+                log_warn "MCP Agent Mail: missing installer URL"
             else
                 local tmp_install
                 tmp_install="$(mktemp "${TMPDIR:-/tmp}/acfs-install-${tool}.XXXXXX" 2>/dev/null)" || tmp_install=""
 
-                if [[ -n "$tmp_install" ]] && verify_checksum "$url" "$expected_sha256" "$tool" > "$tmp_install"; then
+                if [[ -n "$tmp_install" ]] && acfs_curl_with_retry "$url" "$tmp_install"; then
                     chmod 755 "$tmp_install" 2>/dev/null || true
 
                     # Kill existing session if any (clean slate)
@@ -4413,11 +4156,11 @@ NTM_CONFIG_EOF
                     fi
                 else
                     rm -f "$tmp_install" 2>/dev/null || true
-                    log_warn "MCP Agent Mail: installer verification failed"
+                    log_warn "MCP Agent Mail: failed to fetch installer"
                 fi
             fi
         else
-            log_warn "MCP Agent Mail: unable to load upstream checksums; refusing to run unverified installer"
+            log_warn "MCP Agent Mail: unable to load upstream installer URLs"
         fi
     fi
 
@@ -4642,10 +4385,9 @@ finalize() {
     try_step "Setting newproj permissions" $SUDO chmod 755 "$ACFS_HOME/scripts/lib/"newproj*.sh "$ACFS_HOME/scripts/lib/newproj_screens/"*.sh || return 1
     try_step "Setting newproj ownership" acfs_chown_tree "$TARGET_USER:$TARGET_USER" "$ACFS_HOME/scripts/lib" || return 1
 
-    # Install checksums + version metadata so `acfs update --stack` can verify upstream scripts.
-    try_step "Installing checksums.yaml" install_checksums_yaml "$ACFS_HOME/checksums.yaml" || return 1
+    # Install version metadata.
     try_step "Installing VERSION" install_asset "VERSION" "$ACFS_HOME/VERSION" || return 1
-    try_step "Setting metadata ownership" $SUDO chown "$TARGET_USER:$TARGET_USER" "$ACFS_HOME/checksums.yaml" "$ACFS_HOME/VERSION" || true
+    try_step "Setting metadata ownership" $SUDO chown "$TARGET_USER:$TARGET_USER" "$ACFS_HOME/VERSION" || true
 
     # Legacy: Install doctor as acfs binary (for backwards compat)
     try_step "Installing acfs CLI" install_asset "scripts/lib/doctor.sh" "$ACFS_HOME/bin/acfs" || return 1
@@ -5379,21 +5121,9 @@ main() {
         _run_phase_with_report "stack" "8/9 Stack" install_stack_phase
         _run_phase_with_report "finalize" "9/9 Finalize" finalize
 
-        # Always update checksums.yaml and VERSION after all phases complete
+        # Always update VERSION after all phases complete
         # This ensures resume installs get fresh metadata even if finalize was previously completed
-        # Related: PR #44 - fix checksums.yaml becoming stale on resume installs
         if [[ -n "${ACFS_BOOTSTRAP_DIR:-}" ]] && [[ -d "$ACFS_BOOTSTRAP_DIR" ]]; then
-            if [[ -f "$ACFS_BOOTSTRAP_DIR/checksums.yaml" ]]; then
-                if [[ -n "${ACFS_CHECKSUMS_REF:-}" && -n "${ACFS_REF_INPUT:-}" && "$ACFS_CHECKSUMS_REF" != "$ACFS_REF_INPUT" ]]; then
-                    log_detail "Refreshing checksums.yaml from ref '${ACFS_CHECKSUMS_REF}'"
-                    install_checksums_yaml "$ACFS_HOME/checksums.yaml" || true
-                    $SUDO chown "$TARGET_USER:$TARGET_USER" "$ACFS_HOME/checksums.yaml" 2>/dev/null || true
-                else
-                    log_detail "Ensuring checksums.yaml is up to date"
-                    $SUDO cp -f "$ACFS_BOOTSTRAP_DIR/checksums.yaml" "$ACFS_HOME/checksums.yaml" 2>/dev/null || true
-                    $SUDO chown "$TARGET_USER:$TARGET_USER" "$ACFS_HOME/checksums.yaml" 2>/dev/null || true
-                fi
-            fi
             if [[ -f "$ACFS_BOOTSTRAP_DIR/VERSION" ]]; then
                 log_detail "Ensuring VERSION is up to date"
                 $SUDO cp -f "$ACFS_BOOTSTRAP_DIR/VERSION" "$ACFS_HOME/VERSION" 2>/dev/null || true

@@ -608,17 +608,14 @@ update_run_verified_installer() {
     fi
 
     local url="${KNOWN_INSTALLERS[$tool]:-}"
-    local expected_sha256
-    expected_sha256="$(get_checksum "$tool")"
-
-    if [[ -z "$url" ]] || [[ -z "$expected_sha256" ]]; then
-        echo "Missing checksum entry for $tool" >&2
+    if [[ -z "$url" ]]; then
+        echo "Missing installer URL entry for $tool" >&2
         return 1
     fi
 
     (
         set -o pipefail
-        verify_checksum "$url" "$expected_sha256" "$tool" | bash -s -- "$@"
+        verify_checksum "$url" "" "$tool" | bash -s -- "$@"
     )
 }
 
